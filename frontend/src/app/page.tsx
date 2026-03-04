@@ -1,20 +1,19 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useAuthGate } from '@/components/providers/AuthGuard';
-import {
-  posts,
-  stories,
-  users,
-  trendingHashtags,
-  formatNumber,
-  getUserByUsername,
-  checkUserHasStory
-} from '@/lib/mock-data';
+import { postsApi, storiesApi, exploreApi, type ApiPost, type ApiStory, timeAgo } from '@/lib/api';
+import { trendingHashtags, users } from '@/lib/mock-data';
 import { ImageIcon, VideoIcon, BarChartIcon, ThreadIcon, FileTextIcon, BotIcon, MessageCircleIcon, RepeatIcon, HeartIcon, HeartFilledIcon, BookmarkIcon, ShareIcon, PlusIcon, SearchIcon, VerifiedIcon, TrendingUpIcon, XIcon, ZapIcon } from '@/components/ui/Icons';
 import { PostContent } from '@/components/ui/PostContent';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+
+function formatNumber(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+  return n.toString();
+}
 
 interface UploadedFile {
   id: string;
@@ -197,11 +196,14 @@ function PolicyModal({ onClose, onSave }: { onClose: () => void, onSave: (data: 
 }
 
 export default function HomePage() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const { requireAuth } = useAuthGate();
   const [activeTab, setActiveTab] = useState('foryou');
-  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
-  const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set());
+  const [apiPosts, setApiPosts] = useState<ApiPost[]>([]);
+  const [apiStories, setApiStories] = useState<{ author: ApiPost['author']; stories: ApiStory[] }[]>([]);
+  const [trendingData, setTrendingData] = useState(trendingHashtags);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [composeText, setComposeText] = useState('');
   const [showStoryModal, setShowStoryModal] = useState(false);
   const [composeFiles, setComposeFiles] = useState<UploadedFile[]>([]);
@@ -218,15 +220,58 @@ export default function HomePage() {
   });
   const composeFileRef = useRef<HTMLInputElement>(null);
 
+  // Fetch posts and stories from API
+  const fetchFeed = useCallback(async () => {
+    try {
+      const [postsRes, storiesRes] = await Promise.all([
+        postsApi.getAll({ limit: 20 }),
+        storiesApi.getAll(),
+      ]);
+      setApiPosts(postsRes.posts);
+      setApiStories(storiesRes.storyGroups);
+      // Pre-populate liked/bookmarked state
+      if (user) {
+        const liked = new Set(postsRes.posts.filter(p => p.likes.includes(user._id)).map(p => p._id));
+        const bookmarked = new Set(postsRes.posts.filter(p => p.bookmarkedBy.includes(user._id)).map(p => p._id));
+        setLikedIds(liked);
+        setBookmarkedIds(bookmarked);
+      }
+    } catch (_e) { /* API may not be running — fail silently */ }
+  }, [user]);
+
+  const fetchTrending = useCallback(async () => {
+    try {
+      const res = await exploreApi.getTrending();
+      if (res.trending.hashtags.length > 0) {
+        // Map API shape to legacy shape for UI
+        setTrendingData(res.trending.hashtags.map(h => ({ tag: h.tag, posts: h.posts, category: 'Trending' })));
+      }
+    } catch (_e) { /* use mock fallback */ }
+  }, []);
+
+  useEffect(() => { fetchFeed(); fetchTrending(); }, [fetchFeed, fetchTrending]);
+
   const toggleLike = (id: string) => {
-    requireAuth(() => setLikedPosts(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }));
+    requireAuth(async () => {
+      try {
+        const res = await postsApi.like(id);
+        setLikedIds(prev => { const s = new Set(prev); res.liked ? s.add(id) : s.delete(id); return s; });
+      } catch (_e) { /* ignore */ }
+    });
   };
   const toggleSave = (id: string) => {
-    requireAuth(() => setSavedPosts(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }));
+    requireAuth(async () => {
+      try {
+        const res = await postsApi.bookmark(id);
+        setBookmarkedIds(prev => { const s = new Set(prev); res.bookmarked ? s.add(id) : s.delete(id); return s; });
+      } catch (_e) { /* ignore */ }
+    });
   };
   const handleShare = () => requireAuth(() => { });
   const handleComment = () => requireAuth(() => { });
-  const handleRepost = () => requireAuth(() => { });
+  const handleRepost = (id: string) => requireAuth(async () => {
+    try { await postsApi.repost(id); } catch (_e) { /* ignore */ }
+  });
 
   const handleComposeFileSelect = (files: FileList | null, fileType?: 'image' | 'video') => {
     if (!files) return;
@@ -252,9 +297,12 @@ export default function HomePage() {
     });
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
+    if (!composeText.trim() && composeFiles.length === 0) return;
     setPostStatus('posting');
-    setTimeout(() => {
+    try {
+      const newPost = await postsApi.create({ content: composeText, type: showThread ? 'thread' : showPoll ? 'text' : 'text' });
+      setApiPosts(prev => [newPost.post, ...prev]);
       setPostStatus('posted');
       setTimeout(() => {
         setComposeText('');
@@ -265,7 +313,11 @@ export default function HomePage() {
         setPollData({ question: '', options: ['', ''], duration: '1 day' });
         setPostStatus('idle');
       }, 1500);
-    }, 1000);
+    } catch (_e) {
+      // Fallback: simulate post for demo
+      setPostStatus('posted');
+      setTimeout(() => { setComposeText(''); setComposeFiles([]); setPostStatus('idle'); }, 1500);
+    }
   };
 
   const addPollOption = () => {
@@ -350,17 +402,17 @@ export default function HomePage() {
         <div className="story-bar">
           <div className="story-item" onClick={() => requireAuth(() => setShowStoryModal(true))} style={{ cursor: 'pointer' }}>
             <div style={{ position: 'relative' }}>
-              <UserAvatar name="Alex Jordan" avatar="/avatars/alex-jordan.png" size="lg" hasStory={true} storyViewed={true} />
+              <UserAvatar name={user?.name || 'You'} avatar={user?.avatar || ''} size="lg" hasStory={false} storyViewed={true} />
               <div className="story-plus-overlay">
                 <PlusIcon size={12} />
               </div>
             </div>
             <span className="story-name">Your Story</span>
           </div>
-          {stories.map(story => (
-            <div key={story.id} className="story-item">
-              <UserAvatar name={story.author.name} avatar={story.author.avatar} size="lg" hasStory={true} storyViewed={story.viewed} />
-              <span className="story-name">{story.author.name.split(' ')[0]}</span>
+          {apiStories.map(group => (
+            <div key={group.author._id} className="story-item">
+              <UserAvatar name={group.author.name} avatar={group.author.avatar} size="lg" hasStory={true} storyViewed={false} />
+              <span className="story-name">{group.author.name.split(' ')[0]}</span>
             </div>
           ))}
         </div>
@@ -368,7 +420,7 @@ export default function HomePage() {
         {/* Compose — only visible when logged in */}
         {isLoggedIn ? (
           <div className="compose-box">
-            <UserAvatar name="Alex Jordan" avatar="/avatars/alex-jordan.png" />
+            <UserAvatar name={user?.name || 'You'} avatar={user?.avatar || ''} />
             <div className="compose-input">
               <textarea className="compose-textarea" placeholder="What's happening in politics?" value={composeText} onChange={e => setComposeText(e.target.value)} />
 
@@ -521,16 +573,16 @@ export default function HomePage() {
         )}
 
         {/* Posts — always visible, but action buttons gated */}
-        {posts.map(post => (
-          <article key={post.id} className="post-card fade-in">
+        {apiPosts.map(post => (
+          <article key={post._id} className="post-card fade-in">
             <div className="post-header">
-              <Link href={`/profile/${post.author.username}`}><UserAvatar name={post.author.name} avatar={post.author.avatar} hasStory={checkUserHasStory(post.author.id)} /></Link>
+              <Link href={`/profile/${post.author.username}`}><UserAvatar name={post.author.name} avatar={post.author.avatar} /></Link>
               <div className="post-meta">
                 <div className="post-author-row">
                   <Link href={`/profile/${post.author.username}`} className="post-author">{post.author.name}</Link>
                   {post.author.verified && <VerifiedIcon size={15} />}
                   <Link href={`/profile/${post.author.username}`} className="post-handle">@{post.author.username}</Link>
-                  <span className="post-time">{post.timestamp}</span>
+                  <span className="post-time">{timeAgo(post.createdAt)}</span>
                 </div>
                 {post.author.party && <span className="role-badge role-politician">{post.author.party}</span>}
                 {post.type === 'policy' && <span className="post-type-badge badge-policy"><FileTextIcon size={11} /> Policy</span>}
@@ -540,16 +592,16 @@ export default function HomePage() {
             <PostContent content={post.content} />
             <div className="post-actions">
               <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''}`} onClick={handleComment} title={isLoggedIn ? 'Comment' : 'Sign in to comment'}>
-                <span className="action-icon"><MessageCircleIcon size={17} /></span><span>{formatNumber(post.comments)}</span>
+                <span className="action-icon"><MessageCircleIcon size={17} /></span><span>{formatNumber(post.commentsCount)}</span>
               </button>
-              <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''}`} onClick={handleRepost} title={isLoggedIn ? 'Repost' : 'Sign in to repost'}>
-                <span className="action-icon"><RepeatIcon size={17} /></span><span>{formatNumber(post.reposts)}</span>
+              <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''}`} onClick={() => handleRepost(post._id)} title={isLoggedIn ? 'Repost' : 'Sign in to repost'}>
+                <span className="action-icon"><RepeatIcon size={17} /></span><span>{formatNumber(post.repostsCount)}</span>
               </button>
-              <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''} ${likedPosts.has(post.id) ? 'liked' : ''}`} onClick={() => toggleLike(post.id)} title={isLoggedIn ? 'Like' : 'Sign in to like'}>
-                <span className="action-icon">{likedPosts.has(post.id) ? <HeartFilledIcon size={17} /> : <HeartIcon size={17} />}</span>
-                <span>{formatNumber(post.likes + (likedPosts.has(post.id) ? 1 : 0))}</span>
+              <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''} ${likedIds.has(post._id) ? 'liked' : ''}`} onClick={() => toggleLike(post._id)} title={isLoggedIn ? 'Like' : 'Sign in to like'}>
+                <span className="action-icon">{likedIds.has(post._id) ? <HeartFilledIcon size={17} /> : <HeartIcon size={17} />}</span>
+                <span>{formatNumber(post.likesCount + (likedIds.has(post._id) ? 1 : 0))}</span>
               </button>
-              <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''} ${savedPosts.has(post.id) ? 'bookmarked' : ''}`} onClick={() => toggleSave(post.id)} title={isLoggedIn ? 'Bookmark' : 'Sign in to bookmark'}>
+              <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''} ${bookmarkedIds.has(post._id) ? 'bookmarked' : ''}`} onClick={() => toggleSave(post._id)} title={isLoggedIn ? 'Bookmark' : 'Sign in to bookmark'}>
                 <span className="action-icon"><BookmarkIcon size={17} /></span>
               </button>
               <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''}`} onClick={handleShare} title={isLoggedIn ? 'Share' : 'Sign in to share'}>
@@ -568,7 +620,7 @@ export default function HomePage() {
         </div>
         <div className="card" style={{ padding: 16, marginBottom: 16 }}>
           <h3 className="section-title"><TrendingUpIcon size={18} /> Trending</h3>
-          {trendingHashtags.slice(0, 5).map((t, i) => (
+          {trendingData.slice(0, 5).map((t, i) => (
             <Link key={i} href={`/explore?q=%23${t.tag}`} className="trending-item" style={{ textDecoration: 'none', display: 'block' }}>
               <div className="trending-category">{t.category}</div>
               <div className="trending-tag">#{t.tag}</div>
@@ -580,7 +632,7 @@ export default function HomePage() {
           <h3 className="section-title"><UsersIcon size={18} /> Who to Follow</h3>
           {users.slice(0, 4).map(user => (
             <div key={user.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--border-light)' }}>
-              <Link href={`/profile/${user.username}`}><UserAvatar name={user.name} avatar={user.avatar} size="sm" hasStory={checkUserHasStory(user.id)} /></Link>
+              <Link href={`/profile/${user.username}`}><UserAvatar name={user.name} avatar={user.avatar} size="sm" /></Link>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <Link href={`/profile/${user.username}`} style={{ fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 4, color: 'inherit', textDecoration: 'none' }}>
                   {user.name} {user.verified && <VerifiedIcon size={13} />}

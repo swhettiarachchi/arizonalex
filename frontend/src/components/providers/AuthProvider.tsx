@@ -1,55 +1,96 @@
 'use client';
-import { createContext, useContext, useState, ReactNode } from 'react';
-
-interface UserProfile {
-    name: string;
-    username: string;
-    bio: string;
-    location: string;
-    website: string;
-}
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authApi, type ApiUser, getToken, setToken, removeToken } from '@/lib/api';
 
 interface AuthContextType {
     isLoggedIn: boolean;
-    user: UserProfile | null;
-    login: () => void;
+    user: ApiUser | null;
+    token: string | null;
+    login: (email: string, password: string) => Promise<void>;
     logout: () => void;
-    updateProfile: (updates: Partial<UserProfile>) => void;
+    updateProfile: (updates: Partial<ApiUser>) => void;
+    loading: boolean;
+    error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType>({
     isLoggedIn: false,
     user: null,
-    login: () => { },
+    token: null,
+    login: async () => { },
     logout: () => { },
     updateProfile: () => { },
+    loading: false,
+    error: null,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [user, setUser] = useState<UserProfile | null>(null);
+    const [user, setUser] = useState<ApiUser | null>(null);
+    const [token, setTokenState] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);  // start true to rehydrate
+    const [error, setError] = useState<string | null>(null);
 
-    const login = () => {
-        setIsLoggedIn(true);
-        setUser({
-            name: 'Alex Jordan',
-            username: 'alexjordan',
-            bio: 'Engaged citizen. Democracy is not a spectator sport.',
-            location: 'Washington, D.C.',
-            website: '',
-        });
+    // Rehydrate session from localStorage on mount
+    useEffect(() => {
+        const storedToken = getToken();
+        if (storedToken) {
+            setTokenState(storedToken);
+            authApi.getMe()
+                .then(res => setUser(res.user))
+                .catch(() => {
+                    // Token expired or invalid — clear it
+                    removeToken();
+                    setTokenState(null);
+                })
+                .finally(() => setLoading(false));
+        } else {
+            setLoading(false);
+        }
+    }, []);
+
+    const login = async (email: string, password: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await authApi.login(email, password);
+            setToken(res.token);
+            setTokenState(res.token);
+            setUser(res.user);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'Login failed';
+            setError(message);
+            throw err;  // rethrow so login page can handle it
+        } finally {
+            setLoading(false);
+        }
     };
 
     const logout = () => {
-        setIsLoggedIn(false);
+        removeToken();
+        setTokenState(null);
         setUser(null);
     };
 
-    const updateProfile = (updates: Partial<UserProfile>) => {
+    const updateProfile = (updates: Partial<ApiUser>) => {
         setUser(prev => prev ? { ...prev, ...updates } : prev);
     };
 
-    return <AuthContext.Provider value={{ isLoggedIn, user, login, logout, updateProfile }}>{children}</AuthContext.Provider>;
+    return (
+        <AuthContext.Provider
+            value={{
+                isLoggedIn: !!user,
+                user,
+                token,
+                login,
+                logout,
+                updateProfile,
+                loading,
+                error,
+            }}
+        >
+            {children}
+        </AuthContext.Provider>
+    );
 }
 
 export const useAuth = () => useContext(AuthContext);
