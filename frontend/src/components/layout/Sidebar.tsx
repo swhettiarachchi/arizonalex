@@ -4,20 +4,73 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from '../providers/ThemeProvider';
 import { useAuth } from '../providers/AuthProvider';
-import { HomeIcon, SearchIcon, BellIcon, MailIcon, LandmarkIcon, BotIcon, BookmarkIcon, UserIcon, SettingsIcon, SunIcon, MoonIcon, MoreHorizontalIcon, ZapIcon, PlusIcon, LogOutIcon } from '../ui/Icons';
+import {
+    HomeIcon, SearchIcon, BellIcon, MailIcon, LandmarkIcon, BotIcon,
+    BookmarkIcon, UserIcon, SettingsIcon, SunIcon, MoonIcon,
+    MoreHorizontalIcon, ZapIcon, PlusIcon, LogOutIcon, BriefcaseIcon,
+    GlobeIcon, HelpCircleIcon, FlagIcon, ShieldIcon, FileTextIcon,
+    MessageSquareIcon, ServerIcon, ScaleIcon
+} from '../ui/Icons';
 import React from 'react';
 import { UserAvatar } from '../ui/UserAvatar';
 
-const navItems = [
-    { href: '/', icon: <HomeIcon />, label: 'Home' },
-    { href: '/explore', icon: <SearchIcon />, label: 'Explore' },
-    { href: '/notifications', icon: <BellIcon />, label: 'Notifications', badge: 3 },
-    { href: '/messages', icon: <MailIcon />, label: 'Messages', badge: 2 },
-    { href: '/politics', icon: <LandmarkIcon />, label: 'Politics' },
-    { href: '/ai-tools', icon: <BotIcon />, label: 'AI Tools' },
-    { href: '/bookmarks', icon: <BookmarkIcon />, label: 'Bookmarks' },
-    { href: '/profile', icon: <UserIcon />, label: 'Profile' },
-    { href: '/admin', icon: <SettingsIcon />, label: 'Admin' },
+interface NavItem {
+    href: string;
+    icon: React.ReactNode;
+    label: string;
+    badge?: number;
+}
+
+interface NavSection {
+    label: string;
+    items: NavItem[];
+}
+
+const navSections: NavSection[] = [
+    {
+        label: '',
+        items: [
+            { href: '/', icon: <HomeIcon />, label: 'Home' },
+            { href: '/explore', icon: <SearchIcon />, label: 'Explore' },
+            { href: '/notifications', icon: <BellIcon />, label: 'Notifications', badge: 3 },
+            { href: '/messages', icon: <MailIcon />, label: 'Messages', badge: 2 },
+        ]
+    },
+    {
+        label: 'Intelligence',
+        items: [
+            { href: '/global-politics', icon: <GlobeIcon />, label: 'Global Politics' },
+            { href: '/politics', icon: <LandmarkIcon />, label: 'Politics' },
+            { href: '/business', icon: <BriefcaseIcon />, label: 'Business' },
+            { href: '/ai-tools', icon: <BotIcon />, label: 'AI Tools' },
+        ]
+    },
+    {
+        label: 'You',
+        items: [
+            { href: '/bookmarks', icon: <BookmarkIcon />, label: 'Bookmarks' },
+            { href: '/profile', icon: <UserIcon />, label: 'Profile' },
+            { href: '/admin', icon: <SettingsIcon />, label: 'Admin' },
+        ]
+    },
+    {
+        label: 'Support',
+        items: [
+            { href: '/help', icon: <HelpCircleIcon />, label: 'Help Center' },
+            { href: '/faq', icon: <MessageSquareIcon />, label: 'FAQ' },
+            { href: '/contact', icon: <MailIcon />, label: 'Contact Us' },
+            { href: '/report', icon: <FlagIcon />, label: 'Report' },
+            { href: '/status', icon: <ServerIcon />, label: 'System Status' },
+        ]
+    },
+    {
+        label: 'Legal',
+        items: [
+            { href: '/guidelines', icon: <ShieldIcon />, label: 'Guidelines' },
+            { href: '/privacy', icon: <FileTextIcon />, label: 'Privacy' },
+            { href: '/terms', icon: <ScaleIcon />, label: 'Terms' },
+        ]
+    },
 ];
 
 export default function Sidebar() {
@@ -45,13 +98,21 @@ export default function Sidebar() {
                 Arizonalex
             </div>
             <nav className="sidebar-nav">
-                {navItems.map(item => (
-                    <Link key={item.href} href={item.href} className={`nav-item ${pathname === item.href ? 'active' : ''}`}>
-                        <span className="nav-icon">{item.icon}</span>
-                        <span>{item.label}</span>
-                        {isLoggedIn && item.badge && <span className="badge">{item.badge}</span>}
-                    </Link>
+                {navSections.map((section, si) => (
+                    <React.Fragment key={si}>
+                        {section.label && (
+                            <div className="sidebar-section-label">{section.label}</div>
+                        )}
+                        {section.items.map(item => (
+                            <Link key={item.href} href={item.href} className={`nav-item ${pathname === item.href ? 'active' : ''}`}>
+                                <span className="nav-icon">{item.icon}</span>
+                                <span>{item.label}</span>
+                                {isLoggedIn && item.badge && <span className="badge">{item.badge}</span>}
+                            </Link>
+                        ))}
+                    </React.Fragment>
                 ))}
+                <div className="sidebar-section-label" />
                 <button className="nav-item" onClick={toggle}>
                     <span className="nav-icon">{theme === 'dark' ? <SunIcon /> : <MoonIcon />}</span>
                     <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
@@ -110,4 +171,3 @@ export default function Sidebar() {
         </aside>
     );
 }
-

@@ -9,7 +9,7 @@ export interface User {
   avatar: string;
   banner?: string;
   bio: string;
-  role: 'politician' | 'journalist' | 'citizen' | 'official' | 'admin';
+  role: 'politician' | 'journalist' | 'citizen' | 'official' | 'admin' | 'businessman' | 'entrepreneur' | 'crypto_trader' | 'stock_trader' | 'banker' | 'doctor' | 'researcher' | 'academic' | 'lawyer' | 'judge' | 'activist' | 'celebrity' | 'other';
   verified: boolean;
   party?: string;
   followers: number;
@@ -154,49 +154,49 @@ export const users: User[] = [
 export const posts: Post[] = [
   {
     id: '1', author: users[0],
-    content: '🏛️ Today we passed the Digital Privacy Act with bipartisan support. This landmark legislation will protect citizens\' data from corporate overreach while maintaining innovation. A win for democracy!\n\n#DigitalPrivacy #Governance #Transparency',
+    content: '[LEGISLATION] Today we passed the Digital Privacy Act with bipartisan support. This landmark legislation will protect citizens\' data from corporate overreach while maintaining innovation. A win for democracy!\n\n#DigitalPrivacy #Governance #Transparency',
     type: 'text', likes: 12400, comments: 3200, reposts: 5600, timestamp: '2h ago',
     hashtags: ['DigitalPrivacy', 'Governance', 'Transparency']
   },
   {
     id: '2', author: users[1],
-    content: 'BREAKING: Leaked documents reveal massive infrastructure spending discrepancies between reported and actual allocations. Full investigation report dropping tomorrow.\n\nStay tuned. 🔍',
+    content: 'BREAKING: Leaked documents reveal massive infrastructure spending discrepancies between reported and actual allocations. Full investigation report dropping tomorrow.\n\nStay tuned — full analysis coming soon.',
     type: 'text', likes: 8900, comments: 2100, reposts: 4300, timestamp: '4h ago',
     hashtags: ['Breaking', 'Investigation']
   },
   {
     id: '3', author: users[2],
-    content: 'Proud to announce our state\'s new Green Energy Initiative. By 2030, we aim for 80% renewable energy. Here\'s our roadmap:\n\n✅ Phase 1: Solar farm expansion (2025)\n✅ Phase 2: Wind energy corridors (2026)\n✅ Phase 3: EV infrastructure (2027)\n🔄 Phase 4: Grid modernization (2028-2030)\n\n#CleanEnergy #GreenFuture',
+    content: 'Proud to announce our state\'s new Green Energy Initiative. By 2030, we aim for 80% renewable energy. Here\'s our roadmap:\n\n[DONE] Phase 1: Solar farm expansion (2025)\n[DONE] Phase 2: Wind energy corridors (2026)\n[DONE] Phase 3: EV infrastructure (2027)\n[IN PROGRESS] Phase 4: Grid modernization (2028-2030)\n\n#CleanEnergy #GreenFuture',
     type: 'policy', likes: 34500, comments: 8700, reposts: 12000, timestamp: '6h ago',
     hashtags: ['CleanEnergy', 'GreenFuture']
   },
   {
     id: '4', author: users[3],
-    content: 'Town Hall tonight at 7 PM! We\'re discussing the new community development plan. Your input matters. See you there! 🏘️\n\nLocation: City Hall, Room 204\nLive stream: arizonalex.com/live/townhall',
+    content: 'Town Hall tonight at 7 PM! We\'re discussing the new community development plan. Your input matters. See you there!\n\nLocation: City Hall, Room 204\nLive stream: arizonalex.com/live/townhall',
     type: 'text', likes: 2300, comments: 890, reposts: 1200, timestamp: '8h ago',
     hashtags: ['TownHall', 'CommunityFirst']
   },
   {
     id: '5', author: users[5],
-    content: '📊 New Research: Our analysis of 10,000+ policy proposals reveals that data-driven legislation has a 73% higher success rate in achieving stated objectives.\n\nKey findings in this thread 🧵👇',
+    content: '[RESEARCH] New Analysis: Our study of 10,000+ policy proposals reveals that data-driven legislation has a 73% higher success rate in achieving stated objectives.\n\nKey findings thread below — read on for the full breakdown.',
     type: 'thread', likes: 15600, comments: 4500, reposts: 7800, timestamp: '12h ago',
     hashtags: ['PolicyResearch', 'DataDriven']
   },
   {
     id: '6', author: users[6],
-    content: '🚄 The National High-Speed Rail project just broke ground in 3 new states! This will connect 15 major cities by 2029, creating 200,000+ jobs.\n\nInfrastructure is not just concrete and steel — it\'s opportunity.',
+    content: '[INFRASTRUCTURE] The National High-Speed Rail project just broke ground in 3 new states. This will connect 15 major cities by 2029, creating 200,000+ jobs.\n\nInfrastructure is not just concrete and steel — it is opportunity.',
     type: 'text', likes: 28700, comments: 6200, reposts: 9400, timestamp: '1d ago',
     hashtags: ['Infrastructure', 'HSR', 'Jobs']
   },
   {
     id: '7', author: users[7],
-    content: '📚 Excited to share: Our Universal Pre-K bill passed committee today! Every 4-year-old in our state will have access to quality early education by 2026.\n\nThis is what investing in our future looks like.',
+    content: '[EDUCATION] Excited to share: Our Universal Pre-K bill passed committee today. Every 4-year-old in our state will have access to quality early education by 2026.\n\nThis is what investing in our future looks like.',
     type: 'text', likes: 19200, comments: 3800, reposts: 6100, timestamp: '1d ago',
     hashtags: ['Education', 'PreK', 'FutureFirst']
   },
   {
     id: '8', author: users[4],
-    content: 'Attended my first town hall meeting today. Impressed by how engaged local officials were with community concerns. This is what democracy should look like! 🗳️',
+    content: 'Attended my first town hall meeting today. Impressed by how engaged local officials were with community concerns. This is what democracy should look like.',
     type: 'text', likes: 890, comments: 234, reposts: 156, timestamp: '2d ago',
     hashtags: ['Democracy', 'CivicEngagement']
   },
@@ -294,13 +294,13 @@ export const notifications: Notification[] = [
 
 // ---- MOCK STORIES ----
 export const stories: Story[] = [
-  { id: '1', author: users[0], image: '🏛️', timestamp: '1h ago', viewed: false },
-  { id: '2', author: users[2], image: '🌿', timestamp: '3h ago', viewed: false },
-  { id: '3', author: users[6], image: '🚄', timestamp: '5h ago', viewed: true },
-  { id: '4', author: users[7], image: '📚', timestamp: '8h ago', viewed: true },
-  { id: '5', author: users[1], image: '🔍', timestamp: '10h ago', viewed: false },
-  { id: '6', author: users[5], image: '📊', timestamp: '12h ago', viewed: true },
-  { id: '7', author: users[3], image: '🏘️', timestamp: '15h ago', viewed: true },
+  { id: '1', author: users[0], image: 'gradient-politics', timestamp: '1h ago', viewed: false },
+  { id: '2', author: users[2], image: 'gradient-green', timestamp: '3h ago', viewed: false },
+  { id: '3', author: users[6], image: 'gradient-infra', timestamp: '5h ago', viewed: true },
+  { id: '4', author: users[7], image: 'gradient-edu', timestamp: '8h ago', viewed: true },
+  { id: '5', author: users[1], image: 'gradient-news', timestamp: '10h ago', viewed: false },
+  { id: '6', author: users[5], image: 'gradient-data', timestamp: '12h ago', viewed: true },
+  { id: '7', author: users[3], image: 'gradient-civic', timestamp: '15h ago', viewed: true },
 ];
 
 // ---- ADMIN STATS ----
@@ -316,7 +316,8 @@ export const platformStats = {
 };
 
 // ---- HELPER: Format numbers ----
-export function formatNumber(num: number): string {
+export function formatNumber(num: number | undefined | null): string {
+  if (num === undefined || num === null || isNaN(num)) return '0';
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
   if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K';
   return num.toString();
@@ -334,4 +335,180 @@ export function getPostsByUser(username: string): Post[] {
 export function checkUserHasStory(userId: string): boolean {
   return stories.some(s => s.author.id === userId);
 }
+
+// ---- BREAKING NEWS ----
+export const breakingNews = [
+  { id: '1', headline: 'Senate passes landmark Digital Privacy Act 68-32 in historic bipartisan vote', category: 'Legislation', urgency: 'high', time: '12m ago' },
+  { id: '2', headline: 'Federal Reserve signals potential rate cut amid slowing inflation data', category: 'Finance', urgency: 'high', time: '28m ago' },
+  { id: '3', headline: 'Governor Chen announces $4.2B green energy investment package for 2026', category: 'Policy', urgency: 'medium', time: '45m ago' },
+  { id: '4', headline: 'S&P 500 hits all-time high as trade deal optimism boosts markets', category: 'Markets', urgency: 'medium', time: '1h ago' },
+  { id: '5', headline: 'New infrastructure bill creates 200,000 jobs across 12 states — analysis', category: 'Economy', urgency: 'medium', time: '2h ago' },
+  { id: '6', headline: 'Healthcare reform bill advances to full Senate floor vote next week', category: 'Healthcare', urgency: 'low', time: '3h ago' },
+];
+
+// ---- MARKET DATA ----
+export const marketData = [
+  { id: '1', symbol: 'S&P 500', price: '5,842.31', change: '+1.24%', positive: true, url: 'https://www.tradingview.com/chart/?symbol=SP%3ASPX' },
+  { id: '2', symbol: 'NASDAQ', price: '18,429.10', change: '+0.87%', positive: true, url: 'https://www.tradingview.com/chart/?symbol=NASDAQ%3AIXIC' },
+  { id: '3', symbol: 'DOW JONES', price: '43,215.55', change: '-0.31%', positive: false, url: 'https://www.tradingview.com/chart/?symbol=DJ%3ADJI' },
+  { id: '4', symbol: 'BTC/USD', price: '$82,450', change: '+3.21%', positive: true, url: 'https://www.tradingview.com/chart/?symbol=BITSTAMP%3ABTCUSD' },
+  { id: '5', symbol: 'Gold', price: '$2,187/oz', change: '+0.52%', positive: true, url: 'https://www.tradingview.com/chart/?symbol=COMEX%3AGC1!' },
+  { id: '6', symbol: 'Oil (WTI)', price: '$71.42', change: '-1.08%', positive: false, url: 'https://www.tradingview.com/chart/?symbol=NYMEX%3ACL1!' },
+];
+
+// ---- ACTIVE BILLS ----
+export const activeBills = [
+  {
+    id: '1', title: 'Healthcare Access & Affordability Act', code: 'H.R. 4821',
+    status: 'floor_vote', category: 'Healthcare', impact: 'High Business Impact',
+    forVotes: 218, againstVotes: 187, description: 'Expands Medicaid eligibility and caps drug pricing for essential medications.',
+    sponsor: users[0], daysActive: 42, date: 'Mar 10, 2026'
+  },
+  {
+    id: '2', title: 'National Broadband Infrastructure Act', code: 'S. 1203',
+    status: 'committee', category: 'Technology', impact: 'Tech Sector',
+    forVotes: 0, againstVotes: 0, description: 'Allocates $60B to expand high-speed internet to rural and underserved areas.',
+    sponsor: users[6], daysActive: 18, date: 'Pending',
+  },
+  {
+    id: '3', title: 'Capital Gains Tax Reform Bill', code: 'H.R. 5510',
+    status: 'debate', category: 'Finance', impact: 'Markets Critical',
+    forVotes: 201, againstVotes: 210, description: 'Proposes restructured capital gains brackets affecting investors and corporations.',
+    sponsor: users[3], daysActive: 67, date: 'Mar 18, 2026'
+  },
+  {
+    id: '4', title: 'Clean Energy Transition Fund', code: 'S. 892',
+    status: 'passed', category: 'Environment', impact: 'Energy Sector',
+    forVotes: 312, againstVotes: 118, description: 'Establishes $120B transition fund for fossil fuel workers and green energy R&D.',
+    sponsor: users[2], daysActive: 94, date: 'Signed'
+  },
+];
+
+// ---- ECONOMIC INDICATORS ----
+export const economicIndicators = [
+  { id: '1', label: 'GDP Growth', value: '2.8%', change: '+0.3%', positive: true, period: 'Q4 2025', description: 'Gross Domestic Product (GDP) is the broadest measure of economic activity and the primary indicator of the economy\'s health. It represents the total dollar value of all goods and services produced over a specific time period.', url: 'https://www.tradingview.com/symbols/ECONOMICS-USGDPQQ/' },
+  { id: '2', label: 'Inflation (CPI)', value: '3.1%', change: '-0.2%', positive: true, period: 'Feb 2026', description: 'The Consumer Price Index (CPI) measures the average change over time in the prices paid by urban consumers for a market basket of consumer goods and services. It is a key metric for determining inflation.', url: 'https://www.tradingview.com/symbols/ECONOMICS-USCPI/' },
+  { id: '3', label: 'Unemployment', value: '4.2%', change: '+0.1%', positive: false, period: 'Feb 2026', description: 'The unemployment rate represents the number of unemployed as a percentage of the labor force. Labor force data are restricted to people 16 years of age and older who are actively seeking employment.', url: 'https://www.tradingview.com/symbols/ECONOMICS-USUR/' },
+  { id: '4', label: 'Interest Rate', value: '5.25%', change: '0.00%', positive: true, period: 'Mar 2026', description: 'The federal funds rate is the target interest rate set by the Federal Open Market Committee (FOMC) at which commercial banks borrow and lend their excess reserves to each other overnight.', url: 'https://www.tradingview.com/symbols/ECONOMICS-USINTR/' },
+  { id: '5', label: 'Trade Balance', value: '-$68.9B', change: '+$2.1B', positive: true, period: 'Jan 2026', description: 'The balance of trade is the difference between the value of a country\'s exports and the value of a country\'s imports for a given period. A negative value indicates a trade deficit.', url: 'https://www.tradingview.com/symbols/ECONOMICS-USTBAL/' },
+  { id: '6', label: 'Consumer Confidence', value: '104.2', change: '+3.8', positive: true, period: 'Feb 2026', description: 'The Consumer Confidence Index is an economic indicator published by The Conference Board to measure the degree of optimism that consumers feel about the overall state of the economy and their personal financial situation.', url: 'https://www.tradingview.com/symbols/ECONOMICS-USCCI/' },
+];
+
+// ---- SECTOR TRENDS ----
+export const sectorTrends = [
+  { sector: 'Finance', tag: 'CapitalGainsTax', posts: 87400, change: '+142%', hot: true },
+  { sector: 'Healthcare', tag: 'AffordableCareAct', posts: 64200, change: '+89%', hot: true },
+  { sector: 'Energy', tag: 'CleanEnergyFund', posts: 52100, change: '+67%', hot: false },
+  { sector: 'Technology', tag: 'BroadbandBill', posts: 41800, change: '+54%', hot: false },
+  { sector: 'Policy', tag: 'ElectionReform2026', posts: 98700, change: '+201%', hot: true },
+  { sector: 'Economy', tag: 'FedRatecut', posts: 73600, change: '+118%', hot: true },
+];
+
+
+// ---- BUSINESS DATA ----
+
+export interface Company {
+  id: string;
+  name: string;
+  ticker: string;
+  sector: string;
+  price: string;
+  change: string;
+  positive: boolean;
+  marketCap: string;
+  revenue: string;
+  employees: string;
+  ceo: string;
+}
+
+export interface BusinessEvent {
+  id: string;
+  title: string;
+  type: 'conference' | 'ipo' | 'earnings' | 'merger' | 'summit' | 'launch';
+  date: string;
+  location: string;
+  company?: string;
+  impact: 'High' | 'Medium' | 'Low';
+  description: string;
+}
+
+export interface BusinessDeal {
+  id: string;
+  title: string;
+  type: 'merger' | 'acquisition' | 'ipo' | 'partnership' | 'funding' | 'launch';
+  value: string;
+  parties: string;
+  status: 'completed' | 'pending' | 'announced';
+  date: string;
+  sector: string;
+}
+
+export const companies: Company[] = [
+  { id: '1', name: 'Apple Inc.', ticker: 'AAPL', sector: 'Technology', price: '$170.50', change: '+1.14%', positive: true, marketCap: '$2.8T', revenue: '$383.2B', employees: '161K', ceo: 'Tim Cook' },
+  { id: '2', name: 'Microsoft Corp', ticker: 'MSFT', sector: 'Technology', price: '$410.22', change: '+0.85%', positive: true, marketCap: '$3.0T', revenue: '$227.6B', employees: '221K', ceo: 'Satya Nadella' },
+  { id: '3', name: 'Tesla Inc', ticker: 'TSLA', sector: 'Automotive', price: '$182.80', change: '-2.23%', positive: false, marketCap: '$580.6B', revenue: '$96.7B', employees: '140K', ceo: 'Elon Musk' },
+  { id: '4', name: 'JPMorgan Chase', ticker: 'JPM', sector: 'Finance', price: '$192.10', change: '+0.78%', positive: true, marketCap: '$550.4B', revenue: '$158.1B', employees: '309K', ceo: 'Jamie Dimon' },
+  { id: '5', name: 'Nvidia Corp', ticker: 'NVDA', sector: 'Technology', price: '$850.60', change: '+2.52%', positive: true, marketCap: '$2.1T', revenue: '$60.9B', employees: '29K', ceo: 'Jensen Huang' },
+  { id: '6', name: 'Coinbase Global', ticker: 'COIN', sector: 'Crypto/Web3', price: '$240.84', change: '+8.90%', positive: true, marketCap: '$58.2B', revenue: '$3.1B', employees: '3.4K', ceo: 'Brian Armstrong' },
+];
+
+export const businessEvents: BusinessEvent[] = [
+  { id: '1', title: 'Global Tech Summit 2026', type: 'summit', date: 'Mar 10, 2026', location: 'San Francisco, CA', company: 'TechVision Corp', impact: 'High', description: 'Annual gathering of 5,000+ technology leaders discussing AI, policy, and future markets.' },
+  { id: '2', title: 'Q1 Earnings Season Begins', type: 'earnings', date: 'Mar 15, 2026', location: 'Virtual', company: 'Multiple', impact: 'High', description: 'S&P 500 companies report Q1 results — markets expect 8.4% average EPS growth.' },
+  { id: '3', title: 'GreenPower Inc IPO', type: 'ipo', date: 'Mar 20, 2026', location: 'NYSE', company: 'GreenPower Inc', impact: 'High', description: 'Renewable energy startup goes public at $65 target price, raising $3.8B.' },
+  { id: '4', title: 'World Economic Policy Forum', type: 'summit', date: 'Mar 22, 2026', location: 'Geneva, Switzerland', company: undefined, impact: 'High', description: 'Finance ministers and CEOs align on global policy and trade agreements.' },
+  { id: '5', title: 'National Small Business Expo', type: 'conference', date: 'Mar 28, 2026', location: 'Chicago, IL', company: undefined, impact: 'Medium', description: 'America\'s largest SME conference with 12,000 attendees and 400+ exhibitors.' },
+  { id: '6', title: 'FinEdge Capital Merger Close', type: 'merger', date: 'Apr 1, 2026', location: 'New York, NY', company: 'FinEdge Capital', impact: 'High', description: '$42B merger between FinEdge Capital and Meridian Bank pending final regulatory approval.' },
+];
+
+export const businessDeals: BusinessDeal[] = [
+  { id: '1', title: 'FinEdge × Meridian Bank Merger', type: 'merger', value: '$42B', parties: 'FinEdge Capital + Meridian Bank', status: 'pending', date: 'Apr 1, 2026', sector: 'Finance' },
+  { id: '2', title: 'TechVision acquires CloudSync AI', type: 'acquisition', value: '$8.4B', parties: 'TechVision Corp + CloudSync AI', status: 'completed', date: 'Feb 28, 2026', sector: 'Technology' },
+  { id: '3', title: 'GreenPower Series D Funding', type: 'funding', value: '$1.2B', parties: 'GreenPower Inc + VC Consortium', status: 'completed', date: 'Feb 14, 2026', sector: 'Energy' },
+  { id: '4', title: 'NovaBioMed × GenPharm Partnership', type: 'partnership', value: '$550M', parties: 'NovaBioMed + GenPharm Labs', status: 'announced', date: 'Mar 5, 2026', sector: 'Healthcare' },
+  { id: '5', title: 'CryptoVault DeFi Protocol Launch', type: 'launch', value: '$200M', parties: 'CryptoVault Ltd', status: 'announced', date: 'Mar 18, 2026', sector: 'Crypto/Web3' },
+];
+
+export const businessPolls = [
+  {
+    id: 'b1',
+    question: 'What is the biggest risk to the economy in 2026?',
+    options: [
+      { label: 'Inflation remaining elevated', votes: 38400 },
+      { label: 'Rising interest rates', votes: 29100 },
+      { label: 'Global trade disruptions', votes: 22700 },
+      { label: 'Tech sector correction', votes: 14800 },
+    ],
+    totalVotes: 105000, endDate: 'Mar 25, 2026',
+  },
+  {
+    id: 'b2',
+    question: 'Which sector will outperform in Q2 2026?',
+    options: [
+      { label: 'Artificial Intelligence / Tech', votes: 51200 },
+      { label: 'Green Energy', votes: 34800 },
+      { label: 'Healthcare / Biotech', votes: 22100 },
+      { label: 'Financial Services', votes: 18900 },
+    ],
+    totalVotes: 127000, endDate: 'Apr 1, 2026',
+  },
+];
+
+export const sectorPerformance = [
+  { sector: 'Technology', ytd: '+18.4%', monthly: '+3.2%', positive: true, marketCap: '$14.2T' },
+  { sector: 'Healthcare', ytd: '+9.1%', monthly: '+1.4%', positive: true, marketCap: '$6.8T' },
+  { sector: 'Energy', ytd: '+22.3%', monthly: '+5.1%', positive: true, marketCap: '$4.1T' },
+  { sector: 'Finance', ytd: '+7.6%', monthly: '-0.3%', positive: false, marketCap: '$8.9T' },
+  { sector: 'Real Estate', ytd: '-2.1%', monthly: '-0.8%', positive: false, marketCap: '$2.4T' },
+  { sector: 'Crypto/Web3', ytd: '+41.2%', monthly: '+9.8%', positive: true, marketCap: '$2.1T' },
+];
+
+export const businessNews = [
+  { id: '1', headline: 'Fed holds rates steady; signals two cuts possible in H2 2026', category: 'Finance', time: '8m ago', urgency: 'high' },
+  { id: '2', headline: 'TechVision Corp acquires CloudSync AI for $8.4B in all-stock deal', category: 'M&A', time: '34m ago', urgency: 'high' },
+  { id: '3', headline: 'GreenPower IPO priced at $65 — expected to surge on debut', category: 'Markets', time: '1h ago', urgency: 'high' },
+  { id: '4', headline: 'Small business optimism hits 3-year high on easing inflation', category: 'Economy', time: '2h ago', urgency: 'medium' },
+  { id: '5', headline: 'Crypto market cap crosses $2T as BTC approaches $90K', category: 'Crypto', time: '3h ago', urgency: 'medium' },
+  { id: '6', headline: 'New trade agreement with EU to reduce tariffs on 2,400 goods', category: 'Trade', time: '4h ago', urgency: 'medium' },
+];
 

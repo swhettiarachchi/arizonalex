@@ -27,31 +27,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         return <main className="main-content">{children}</main>;
     }
 
-    // Protected pages require login
+    // Protected pages check removed for demo
+    /*
     if (isProtectedPage && !isLoggedIn) {
-        const info = PROTECTED_PAGE_INFO[pathname];
-        return (
-            <div className="app-layout">
-                <Sidebar />
-                <main className="main-content">
-                    <div className="page-container">
-                        <div className="feed-column">
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
-                                <div style={{ width: 64, height: 64, background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', marginBottom: 20 }}>
-                                    {info?.icon || <ZapIcon size={28} />}
-                                </div>
-                                <h2 style={{ fontSize: '1.3rem', fontWeight: 700, marginBottom: 8 }}>{info?.label || 'Page'}</h2>
-                                <p style={{ fontSize: '0.92rem', color: 'var(--text-secondary)', marginBottom: 28, maxWidth: 360 }}>{info?.desc || 'Sign in to access this page.'}</p>
-                                <Link href="/login" className="btn btn-primary btn-lg" style={{ minWidth: 180, marginBottom: 10 }}>Sign In</Link>
-                                <Link href="/register" className="btn btn-outline btn-lg" style={{ minWidth: 180 }}>Create Account</Link>
-                            </div>
-                        </div>
-                    </div>
-                </main>
-                <MobileNav />
-            </div>
-        );
+        ...
     }
+    */
 
     // All other pages show sidebar + mobile nav (even for guests)
     return (

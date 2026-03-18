@@ -1,93 +1,120 @@
 'use client';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authApi, type ApiUser, getToken, setToken, removeToken } from '@/lib/api';
+
+export type UserRole =
+    | 'politician' | 'official' | 'journalist' | 'citizen' | 'admin'
+    | 'businessman' | 'entrepreneur' | 'crypto_trader' | 'stock_trader'
+    | 'banker' | 'doctor' | 'researcher' | 'academic' | 'lawyer'
+    | 'judge' | 'activist' | 'celebrity' | 'other';
+
+export interface UserProfile {
+    id?: string;
+    name: string;
+    username: string;
+    bio: string;
+    location: string;
+    website: string;
+    role: UserRole;
+    party?: string;
+    avatar?: string;
+    banner?: string;
+    phone?: string;
+    email?: string;
+    verified?: boolean;
+    followers?: number;
+    following?: number;
+    joined?: string;
+}
 
 interface AuthContextType {
     isLoggedIn: boolean;
-    user: ApiUser | null;
-    token: string | null;
-    login: (email: string, password: string) => Promise<void>;
-    logout: () => void;
-    updateProfile: (updates: Partial<ApiUser>) => void;
+    user: UserProfile | null;
     loading: boolean;
-    error: string | null;
+    login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    logout: () => Promise<void>;
+    updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
     isLoggedIn: false,
     user: null,
-    token: null,
-    login: async () => { },
-    logout: () => { },
-    updateProfile: () => { },
-    loading: false,
-    error: null,
+    loading: true,
+    login: async () => ({ success: false }),
+    logout: async () => { },
+    updateProfile: async () => { },
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<ApiUser | null>(null);
-    const [token, setTokenState] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);  // start true to rehydrate
-    const [error, setError] = useState<string | null>(null);
+    const [isLoggedIn, setIsLoggedIn] = useState(true);
+    const [user, setUser] = useState<UserProfile | null>({
+        id: 'demo-user-123',
+        name: 'Demo User',
+        username: 'demouser',
+        bio: 'This is a demo account for ArizonaLex.',
+        location: 'Phoenix, AZ',
+        website: 'https://arizonalex.com',
+        role: 'citizen',
+        verified: true,
+        followers: 1250,
+        following: 450,
+        joined: 'March 2026',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
+    });
+    const [loading, setLoading] = useState(false);
 
-    // Rehydrate session from localStorage on mount
+    // Initial session check disabled for demo
     useEffect(() => {
-        const storedToken = getToken();
-        if (storedToken) {
-            setTokenState(storedToken);
-            authApi.getMe()
-                .then(res => setUser(res.user))
-                .catch(() => {
-                    // Token expired or invalid — clear it
-                    removeToken();
-                    setTokenState(null);
-                })
-                .finally(() => setLoading(false));
-        } else {
-            setLoading(false);
-        }
+        setLoading(false);
     }, []);
 
     const login = async (email: string, password: string) => {
-        setLoading(true);
-        setError(null);
         try {
-            const res = await authApi.login(email, password);
-            setToken(res.token);
-            setTokenState(res.token);
-            setUser(res.user);
-        } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : 'Login failed';
-            setError(message);
-            throw err;  // rethrow so login page can handle it
-        } finally {
-            setLoading(false);
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+            const data = await res.json();
+            if (data.success && data.user) {
+                setUser(data.user);
+                setIsLoggedIn(true);
+                return { success: true };
+            }
+            return { success: false, error: data.error || 'Login failed' };
+        } catch {
+            return { success: false, error: 'Network error' };
         }
     };
 
-    const logout = () => {
-        removeToken();
-        setTokenState(null);
+    const logout = async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+        } catch { }
+        setIsLoggedIn(false);
         setUser(null);
     };
 
-    const updateProfile = (updates: Partial<ApiUser>) => {
-        setUser(prev => prev ? { ...prev, ...updates } : prev);
+    const updateProfile = async (updates: Partial<UserProfile>) => {
+        try {
+            const res = await fetch('/api/auth/me', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates),
+            });
+            const data = await res.json();
+            if (data.user) {
+                setUser(data.user);
+            } else {
+                // Optimistic update if API failed
+                setUser(prev => prev ? { ...prev, ...updates } : prev);
+            }
+        } catch {
+            setUser(prev => prev ? { ...prev, ...updates } : prev);
+        }
     };
 
     return (
-        <AuthContext.Provider
-            value={{
-                isLoggedIn: !!user,
-                user,
-                token,
-                login,
-                logout,
-                updateProfile,
-                loading,
-                error,
-            }}
-        >
+        <AuthContext.Provider value={{ isLoggedIn, user, loading, login, logout, updateProfile }}>
             {children}
         </AuthContext.Provider>
     );

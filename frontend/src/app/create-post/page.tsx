@@ -65,17 +65,29 @@ export default function CreatePostPage() {
         handleFileSelect(e.dataTransfer.files);
     };
 
-    const handlePublish = () => {
+    const handlePublish = async () => {
         setPublishStatus('publishing');
-        setTimeout(() => {
-            setPublishStatus('published');
-            setTimeout(() => {
-                setContent('');
-                setUploadedFiles([]);
+        try {
+            const res = await fetch('/api/posts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content, type: postType }),
+            });
+            const data = await res.json();
+            if (data.post || res.ok) {
+                setPublishStatus('published');
+                setTimeout(() => {
+                    setContent('');
+                    setUploadedFiles([]);
+                    setPublishStatus('idle');
+                    setPostType('text');
+                }, 1500);
+            } else {
                 setPublishStatus('idle');
-                setPostType('text');
-            }, 1500);
-        }, 1200);
+            }
+        } catch {
+            setPublishStatus('idle');
+        }
     };
 
     const acceptTypes = postType === 'video' ? 'video/*' : postType === 'image' ? 'image/*' : 'image/*,video/*';

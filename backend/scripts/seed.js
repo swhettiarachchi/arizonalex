@@ -15,10 +15,12 @@ const Notification = require('../models/Notification');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 
-const seedDB = async () => {
+const seedDB = async (dbUri = process.env.MONGODB_URI, exitOnComplete = true) => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI);
-        console.log('✅ Connected to MongoDB');
+        if (mongoose.connection.readyState === 0) {
+            await mongoose.connect(dbUri);
+            console.log('✅ Connected to MongoDB');
+        }
 
         // Clear all collections
         console.log('🗑️  Clearing existing data...');
@@ -39,15 +41,15 @@ const seedDB = async () => {
         const password = await bcrypt.hash('password123', 12);
 
         const usersData = [
-            { name: 'Sarah Mitchell', email: 'sarah@arizonalex.com', username: 'sarahmitchell', password, avatar: '/avatars/sarah-mitchell.png', bio: 'Senator, District 12. Fighting for transparent governance and equal opportunity.', role: 'politician', verified: true, party: 'Progressive Alliance', banner: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' },
-            { name: 'James Rivera', email: 'james@arizonalex.com', username: 'jamesrivera', password, avatar: '/avatars/james-rivera.png', bio: 'Political journalist @NationalPost. Covering Capitol Hill since 2015.', role: 'journalist', verified: true },
-            { name: 'Diana Chen', email: 'diana@arizonalex.com', username: 'dianachen', password, avatar: '/avatars/diana-chen.png', bio: 'Governor of State. Building bridges, not walls. #TransparentGovernance', role: 'politician', verified: true, party: 'Unity Party' },
-            { name: 'Marcus Thompson', email: 'marcus@arizonalex.com', username: 'marcusthompson', password, avatar: '/avatars/marcus-thompson.png', bio: 'City Council Member. Your voice in local government.', role: 'official', verified: true, party: 'Citizens First' },
-            { name: 'Alex Jordan', email: 'alex@arizonalex.com', username: 'alexjordan', password, avatar: '/avatars/alex-jordan.png', bio: 'Engaged citizen. Democracy is not a spectator sport.', role: 'citizen', verified: false },
-            { name: 'Priya Patel', email: 'priya@arizonalex.com', username: 'priyapatel', password, avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=200&h=200&auto=format&fit=crop', bio: 'Policy researcher & analyst. Data-driven governance advocate.', role: 'journalist', verified: true },
-            { name: 'Robert Kim', email: 'robert@arizonalex.com', username: 'robertkim', password, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&h=200&auto=format&fit=crop', bio: "Secretary of Infrastructure. Rebuilding America's future.", role: 'politician', verified: true, party: 'National Progress' },
-            { name: 'Elena Vasquez', email: 'elena@arizonalex.com', username: 'elenavasquez', password, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&h=200&auto=format&fit=crop', bio: 'Education policy champion. Every child deserves a future.', role: 'politician', verified: true, party: 'Progressive Alliance' },
-            { name: 'Admin User', email: 'admin@arizonalex.com', username: 'admin', password, avatar: '', bio: 'Platform administrator', role: 'admin', verified: true },
+            { _id: '65f1a2b3c4d5e6f7a8b9c001', name: 'Sarah Mitchell', email: 'sarah@arizonalex.com', username: 'sarahmitchell', password, avatar: '/avatars/sarah-mitchell.png', bio: 'Senator, District 12. Fighting for transparent governance and equal opportunity.', role: 'politician', verified: true, party: 'Progressive Alliance', banner: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' },
+            { _id: '65f1a2b3c4d5e6f7a8b9c002', name: 'James Rivera', email: 'james@arizonalex.com', username: 'jamesrivera', password, avatar: '/avatars/james-rivera.png', bio: 'Political journalist @NationalPost. Covering Capitol Hill since 2015.', role: 'journalist', verified: true },
+            { _id: '65f1a2b3c4d5e6f7a8b9c003', name: 'Diana Chen', email: 'diana@arizonalex.com', username: 'dianachen', password, avatar: '/avatars/diana-chen.png', bio: 'Governor of State. Building bridges, not walls. #TransparentGovernance', role: 'politician', verified: true, party: 'Unity Party' },
+            { _id: '65f1a2b3c4d5e6f7a8b9c004', name: 'Marcus Thompson', email: 'marcus@arizonalex.com', username: 'marcusthompson', password, avatar: '/avatars/marcus-thompson.png', bio: 'City Council Member. Your voice in local government.', role: 'official', verified: true, party: 'Citizens First' },
+            { _id: '65f1a2b3c4d5e6f7a8b9c005', name: 'Alex Jordan', email: 'alex@arizonalex.com', username: 'alexjordan', password, avatar: '/avatars/alex-jordan.png', bio: 'Engaged citizen. Democracy is not a spectator sport.', role: 'citizen', verified: false },
+            { _id: '65f1a2b3c4d5e6f7a8b9c006', name: 'Priya Patel', email: 'priya@arizonalex.com', username: 'priyapatel', password, avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=200&h=200&auto=format&fit=crop', bio: 'Policy researcher & analyst. Data-driven governance advocate.', role: 'journalist', verified: true },
+            { _id: '65f1a2b3c4d5e6f7a8b9c007', name: 'Robert Kim', email: 'robert@arizonalex.com', username: 'robertkim', password, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&h=200&auto=format&fit=crop', bio: "Secretary of Infrastructure. Rebuilding America's future.", role: 'politician', verified: true, party: 'National Progress' },
+            { _id: '65f1a2b3c4d5e6f7a8b9c008', name: 'Elena Vasquez', email: 'elena@arizonalex.com', username: 'elenavasquez', password, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&h=200&auto=format&fit=crop', bio: 'Education policy champion. Every child deserves a future.', role: 'politician', verified: true, party: 'Progressive Alliance' },
+            { _id: '65f1a2b3c4d5e6f7a8b9c009', name: 'Admin User', email: 'admin@arizonalex.com', username: 'admin', password, avatar: '', bio: 'Platform administrator', role: 'admin', verified: true },
         ];
 
         const users = await User.insertMany(usersData);
@@ -187,11 +189,21 @@ const seedDB = async () => {
         console.log('  Test user: alex@arizonalex.com / password123');
         console.log('─────────────────────────────────\n');
 
-        process.exit(0);
+        if (exitOnComplete) {
+            process.exit(0);
+        }
     } catch (error) {
         console.error('❌ Seed error:', error);
-        process.exit(1);
+        if (exitOnComplete) {
+            process.exit(1);
+        } else {
+            throw error;
+        }
     }
 };
 
-seedDB();
+if (require.main === module) {
+    seedDB();
+}
+
+module.exports = seedDB;

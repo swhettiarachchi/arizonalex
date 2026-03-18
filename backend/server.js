@@ -33,6 +33,7 @@ app.use('/api/events', require('./routes/events'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/stories', require('./routes/stories'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/stats', require('./routes/stats'));
 app.use('/api/explore', require('./routes/explore'));
 
 // Health check
