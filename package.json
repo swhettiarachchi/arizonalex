@@ -1,0 +1,11 @@
+{
+  "name": "arizonalex-monorepo",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm run build",
+    "install:frontend": "cd frontend && npm install"
+  },
+  "dependencies": {
+    "next": "16.1.6"
+  }
+}
