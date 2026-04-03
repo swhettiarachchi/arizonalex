@@ -134,16 +134,19 @@ export default function DebateRoomPage() {
 
     useEffect(() => {
         if (!socket) return;
-        const handleMessage = ({ debateId: dId, message }: { debateId: string; message: DebateMessage }) => {
+        const handleMessage = (payload: any) => {
+            const { debateId: dId, message } = payload;
             if (dId === debateId) setMessages(prev => [...prev, message]);
         };
-        const handleVoteUpdate = ({ debateId: dId, voteCounts, totalVotes }: { debateId: string; voteCounts: Record<string, number>; totalVotes: number }) => {
+        const handleVoteUpdate = (payload: any) => {
+            const { debateId: dId, voteCounts, totalVotes } = payload;
             if (dId === debateId) setDebate(prev => prev ? { ...prev, voteCounts, totalVotes } : prev);
         };
-        const handleStatus = (updated: Debate) => {
+        const handleStatus = (updated: any) => {
             if (updated._id === debateId) setDebate(prev => prev ? { ...prev, ...updated } : updated);
         };
-        const handleResult = ({ debate: rd }: { debate: Debate }) => {
+        const handleResult = (payload: any) => {
+            const rd = payload.debate || payload;
             if (rd._id === debateId) setDebate(prev => prev ? { ...prev, ...rd } : rd);
         };
         socket.on('debate:message', handleMessage);

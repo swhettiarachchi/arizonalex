@@ -1,34 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/supabase-auth';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-
+// Agora token generation — stub for now, will integrate Agora SDK directly
 export async function GET(req: NextRequest) {
+    const user = await getAuthUser(req);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     try {
-        const token = req.cookies.get('auth_token')?.value;
-
-        if (!token) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         const channelName = req.nextUrl.searchParams.get('channelName');
         const uid = req.nextUrl.searchParams.get('uid');
-        const role = req.nextUrl.searchParams.get('role');
 
-        const res = await fetch(`${API_BASE}/agora/token?channelName=${encodeURIComponent(channelName || '')}&uid=${uid}&role=${role}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            return NextResponse.json({ error: data.message || 'Token generation failed' }, { status: res.status });
+        if (!channelName) {
+            return NextResponse.json({ error: 'channelName is required' }, { status: 400 });
         }
 
-        return NextResponse.json(data);
+        // TODO: Generate Agora token using agora-access-token package
+        // For now, return a placeholder token
+        return NextResponse.json({
+            success: true,
+            token: 'placeholder-token',
+            channelName,
+            uid: uid || '0',
+            message: 'Agora token generation pending — integrate agora-access-token package',
+        });
     } catch {
-        return NextResponse.json({ error: 'Server connection failed' }, { status: 500 });
+        return NextResponse.json({ error: 'Token generation failed' }, { status: 500 });
     }
 }

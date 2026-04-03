@@ -301,14 +301,15 @@ export default function DebatesPage() {
 
     useEffect(() => {
         if (!socket) return;
-        const handleCreated = (debate: Debate) => {
+        const handleCreated = (debate: any) => {
             setDebates(prev => [debate, ...prev]);
         };
-        const handleUpdated = (debate: Debate) => {
+        const handleUpdated = (debate: any) => {
             setDebates(prev => prev.map(d => d._id === debate._id ? debate : d));
         };
-        const handleCancelled = ({ debateId }: { debateId: string }) => {
-            setDebates(prev => prev.map(d => d._id === debateId ? { ...d, status: 'cancelled' as const } : d));
+        const handleCancelled = (payload: any) => {
+            const debateId = payload?.debateId || payload?._id;
+            if (debateId) setDebates(prev => prev.map(d => d._id === debateId ? { ...d, status: 'cancelled' as const } : d));
         };
         socket.on('debate:created', handleCreated);
         socket.on('debate:joined', handleUpdated);

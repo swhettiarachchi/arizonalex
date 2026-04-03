@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
-        const res = await fetch(`${API_BASE}/security/forgot-password`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
+        const { email } = await req.json();
+        if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 });
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/reset-password`,
         });
-        const data = await res.json();
-        return NextResponse.json(data, { status: res.status });
+
+        if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json({ success: true, message: 'Password reset email sent' });
     } catch {
-        return NextResponse.json({ error: 'Server connection failed' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to send reset email' }, { status: 500 });
     }
 }

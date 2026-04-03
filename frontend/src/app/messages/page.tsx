@@ -400,16 +400,14 @@ export default function MessagesPage() {
     const leaveGroup = async () => {
         if (!activeChat) return;
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-            await fetch(`${API}/messages/groups/${activeChat}/leave`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0] || ''}` } });
+            await fetch(`/api/messages/groups`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _action: 'leave', conversationId: activeChat }) });
             setActiveChat(null); setShowInfoPanel(false); setConfirmModal(null); showToast('You left the group'); loadConversations();
         } catch { /**/ }
     };
     const deleteGroup = async () => {
         if (!activeChat) return;
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-            await fetch(`${API}/messages/groups/${activeChat}`, { method: 'DELETE', credentials: 'include', headers: { 'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0] || ''}` } });
+            await fetch(`/api/messages/groups`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _action: 'delete', conversationId: activeChat }) });
             setActiveChat(null); setShowInfoPanel(false); setConfirmModal(null); showToast('Group deleted'); loadConversations();
         } catch { /**/ }
     };
@@ -417,15 +415,13 @@ export default function MessagesPage() {
     // ─── Block / Unblock ──
     const blockUser = async (userId: string) => {
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-            await fetch(`${API}/messages/block`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0] || ''}` }, body: JSON.stringify({ userId }) });
+            await fetch(`/api/messages/${activeChat}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _action: 'block', userId }) });
             setBlockedUsers(prev => [...prev, userId]); setConfirmModal(null); showToast('User blocked');
         } catch { /**/ }
     };
     const unblockUser = async (userId: string) => {
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-            await fetch(`${API}/messages/unblock`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0] || ''}` }, body: JSON.stringify({ userId }) });
+            await fetch(`/api/messages/${activeChat}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _action: 'unblock', userId }) });
             setBlockedUsers(prev => prev.filter(id => id !== userId)); showToast('User unblocked');
         } catch { /**/ }
     };
@@ -435,25 +431,22 @@ export default function MessagesPage() {
         setAddMemberSearch(q);
         if (!q.trim()) { setAddMemberResults([]); return; }
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-            const res = await fetch(`${API}/messages/users/search?q=${encodeURIComponent(q)}`, { credentials: 'include', headers: { 'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0] || ''}` } });
+            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
             const data = await res.json();
-            if (data.users) setAddMemberResults(data.users);
+            if (data.results?.users) setAddMemberResults(data.results.users);
         } catch { /**/ }
     };
     const addMemberToGroup = async (userId: string) => {
         if (!activeChat) return;
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-            await fetch(`${API}/messages/groups/${activeChat}/members`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0] || ''}` }, body: JSON.stringify({ userIds: [userId] }) });
+            await fetch(`/api/messages/groups`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _action: 'addMember', conversationId: activeChat, userId }) });
             showToast('Member added'); setAddMemberSearch(''); setAddMemberResults([]); loadMessages(activeChat);
         } catch { /**/ }
     };
     const removeMemberFromGroup = async (userId: string) => {
         if (!activeChat) return;
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-            await fetch(`${API}/messages/groups/${activeChat}/members/${userId}`, { method: 'DELETE', credentials: 'include', headers: { 'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0] || ''}` } });
+            await fetch(`/api/messages/groups`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _action: 'removeMember', conversationId: activeChat, userId }) });
             showToast('Member removed'); setConfirmModal(null); loadMessages(activeChat);
         } catch { /**/ }
     };
@@ -462,16 +455,14 @@ export default function MessagesPage() {
     const editMessage = async () => {
         if (!editingMsg || !editContent.trim()) return;
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-            await fetch(`${API}/messages/${editingMsg._id}/edit`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0] || ''}` }, body: JSON.stringify({ content: editContent }) });
+            await fetch(`/api/messages/${activeChat}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _action: 'edit', messageId: editingMsg._id, content: editContent }) });
             setMsgs(prev => prev.map(m => m._id === editingMsg._id ? { ...m, content: editContent, edited: true } : m));
             setEditingMsg(null); setEditContent(''); showToast('Message edited');
         } catch { /**/ }
     };
     const deleteMessage = async (msgId: string) => {
         try {
-            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-            await fetch(`${API}/messages/${msgId}`, { method: 'DELETE', credentials: 'include', headers: { 'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0] || ''}` } });
+            await fetch(`/api/messages/${activeChat}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ _action: 'delete', messageId: msgId }) });
             setMsgs(prev => prev.map(m => m._id === msgId ? { ...m, deleted: true, content: 'This message was deleted' } : m));
             setContextMenu(null); setConfirmModal(null); showToast('Message deleted');
         } catch { /**/ }

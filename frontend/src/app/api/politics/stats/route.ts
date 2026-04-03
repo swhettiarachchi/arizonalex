@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { createAdminClient } from '@/lib/supabase-auth';
 
 function generateSyntheticQuote(symbol: string, basePrice: number, volatility: number) {
     const now = new Date();
@@ -17,29 +16,29 @@ function generateSyntheticQuote(symbol: string, basePrice: number, volatility: n
 
 export async function GET() {
     try {
-        const [govTrackRes, backendRes] = await Promise.all([
+        const admin = createAdminClient();
+
+        const [govTrackRes, profilesCount, pollsCount] = await Promise.all([
             fetch('https://www.govtrack.us/api/v2/bill?limit=0', { cache: 'no-store' }).catch(() => null),
-            fetch(`${API_BASE}/stats`, { cache: 'no-store' }).catch(() => null)
+            admin.from('profiles').select('id', { count: 'exact', head: true }),
+            admin.from('polls').select('id', { count: 'exact', head: true }),
         ]);
 
+        let eventsCountNum = 0;
+        try {
+            const { count } = await admin.from('political_events').select('id', { count: 'exact', head: true });
+            eventsCountNum = count || 0;
+        } catch { /* table may not exist */ }
+
         let billCount = 89;
-        let pollCount = 156;
-        let eventCount = 24;
-        let userCount = 2400000;
+        const pollCount = (pollsCount.count || 0) + 156;
+        const eventCount = eventsCountNum + 24;
+        const userCount = (profilesCount.count || 0) + 2400000;
 
         if (govTrackRes && govTrackRes.ok) {
             try {
                 const govData = await govTrackRes.json();
                 if (govData.meta?.total_count) billCount = govData.meta.total_count;
-            } catch { /* ignore */ }
-        }
-
-        if (backendRes && backendRes.ok) {
-            try {
-                const bData = await backendRes.json();
-                pollCount = bData.polls || pollCount;
-                eventCount = bData.events || eventCount;
-                userCount = (bData.users || 0) + 2400000;
             } catch { /* ignore */ }
         }
 
@@ -78,8 +77,9 @@ export async function GET() {
         ];
 
         return NextResponse.json({ stats, analytics, economicIndicators });
-    } catch (e: any) {
-        console.warn('Failed to generate stats data:', e.message);
+    } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Unknown error';
+        console.warn('Failed to generate stats data:', msg);
         return NextResponse.json({
             stats: [
                 { label: 'Active Voters', val: '2.4M', change: '+12%', up: true },

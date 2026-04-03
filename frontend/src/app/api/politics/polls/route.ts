@@ -1,91 +1,91 @@
-import { NextResponse, NextRequest } from 'next/server';
-import { proxyToBackend } from '@/lib/api-proxy';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient, getAuthUser } from '@/lib/supabase-auth';
 
 export async function GET(req: NextRequest) {
-    const token = req.cookies.get('auth_token')?.value;
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
     try {
-        const res = await fetch(`${API_BASE}/polls`, { headers, cache: 'no-store' });
-        const data = await res.json();
-        if (!res.ok) throw new Error('Backend returned error');
+        const admin = createAdminClient();
+        const { data: polls, error } = await admin
+            .from('polls')
+            .select('*, profiles!polls_creator_id_fkey(id, username, display_name, avatar_url, role, is_verified)')
+            .order('created_at', { ascending: false })
+            .limit(20);
 
-        const uid = req.cookies.get('user-id')?.value;
-        const polls = data.polls.map((p: any) => {
-            let votedIndex = undefined;
-            if (uid) {
-                p.options.forEach((opt: any, idx: number) => {
-                    if (opt.votes && Array.isArray(opt.votes) && opt.votes.includes(uid)) {
-                        votedIndex = idx;
-                    }
-                });
-            }
+        if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
 
+        // Get options for each poll
+        const enriched = await Promise.all((polls || []).map(async (poll) => {
+            const { data: options } = await admin
+                .from('poll_options')
+                .select('*')
+                .eq('poll_id', poll.id);
+
+            const profile = poll.profiles as Record<string, unknown> | null;
             return {
-                ...p,
-                id: p._id || p.id,
-                voted: votedIndex,
-                options: p.options.map((o: any) => ({
-                    ...o,
-                    votes: Array.isArray(o.votes) ? o.votes.length : (typeof o.votes === 'number' ? o.votes : 0)
-                }))
+                _id: poll.id, id: poll.id, question: poll.question,
+                category: poll.category, totalVotes: poll.total_votes,
+                isFeatured: poll.is_featured, isLive: poll.is_live, endsAt: poll.ends_at,
+                creator: profile ? { name: profile.display_name, username: profile.username, avatar: profile.avatar_url } : null,
+                options: (options || []).map(o => ({ _id: o.id, id: o.id, label: o.label, votes: o.votes_count })),
+                createdAt: poll.created_at,
             };
-        });
+        }));
 
-        return NextResponse.json({ polls });
+        return NextResponse.json({ success: true, polls: enriched });
     } catch {
-        return NextResponse.json({ polls: [] });
+        return NextResponse.json({ success: false, message: 'Failed to fetch polls' }, { status: 500 });
     }
 }
 
 export async function POST(req: NextRequest) {
-    const token = req.cookies.get('auth_token')?.value;
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     try {
+        const user = await getAuthUser(req);
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
         const body = await req.json();
+        const admin = createAdminClient();
 
-        // Create poll
+        // Vote on a poll
+        if (body.pollId && body.optionId) {
+            const { data: existing } = await admin
+                .from('poll_votes')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('poll_id', body.pollId)
+                .single();
+
+            if (existing) return NextResponse.json({ success: false, message: 'Already voted' }, { status: 400 });
+
+            await admin.from('poll_votes').insert({ user_id: user.id, poll_id: body.pollId, option_id: body.optionId });
+
+            // Increment option votes
+            const { data: opt } = await admin.from('poll_options').select('votes_count').eq('id', body.optionId).single();
+            await admin.from('poll_options').update({ votes_count: (opt?.votes_count || 0) + 1 }).eq('id', body.optionId);
+
+            // Increment total votes
+            const { data: poll } = await admin.from('polls').select('total_votes').eq('id', body.pollId).single();
+            await admin.from('polls').update({ total_votes: (poll?.total_votes || 0) + 1 }).eq('id', body.pollId);
+
+            return NextResponse.json({ success: true, message: 'Vote recorded' });
+        }
+
+        // Create a new poll
         if (body.question && body.options) {
-            const res = await fetch(`${API_BASE}/polls`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            const data = await res.json();
-            if (res.ok && data.poll) {
-                const p = data.poll;
-                return NextResponse.json({
-                    poll: { ...p, id: p._id, voted: undefined, options: p.options.map((o: any) => ({ ...o, votes: 0 })) }
-                });
-            }
-            return NextResponse.json({ error: 'Failed to create poll' }, { status: 500 });
+            const { data: poll, error } = await admin
+                .from('polls')
+                .insert({ creator_id: user.id, question: body.question, category: body.category || null })
+                .select()
+                .single();
+
+            if (error) return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+
+            const optionInserts = body.options.map((label: string) => ({ poll_id: poll.id, label, votes_count: 0 }));
+            await admin.from('poll_options').insert(optionInserts);
+
+            return NextResponse.json({ success: true, poll }, { status: 201 });
         }
 
-        // Vote on poll
-        const { id, optionIndex } = body;
-        const res = await fetch(`${API_BASE}/polls/${id}/vote`, {
-            method: 'PUT',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ optionIndex })
-        });
-        const data = await res.json();
-        if (res.ok && data.poll) {
-            const p = data.poll;
-            return NextResponse.json({
-                poll: {
-                    ...p,
-                    id: p._id || p.id,
-                    voted: optionIndex,
-                    options: p.options.map((o: any) => ({ ...o, votes: Array.isArray(o.votes) ? o.votes.length : o.votes }))
-                }
-            });
-        }
-        return NextResponse.json({ error: data.message || 'Vote failed' }, { status: res.status });
-    } catch (e: any) {
-        return NextResponse.json({ error: e.message || 'Server error' }, { status: 500 });
+        return NextResponse.json({ success: false, message: 'Invalid request' }, { status: 400 });
+    } catch {
+        return NextResponse.json({ success: false, message: 'Failed' }, { status: 500 });
     }
 }

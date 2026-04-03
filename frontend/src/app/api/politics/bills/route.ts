@@ -1,6 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { getAuthUser } from '@/lib/supabase-auth';
 
 export async function GET(req: NextRequest) {
     try {
