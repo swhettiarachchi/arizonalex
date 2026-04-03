@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { formatNumber, checkUserHasStory } from '@/lib/mock-data';
+import { formatNumber, checkUserHasStory } from '@/lib/utils';
 import {
     MessageCircleIcon, RepeatIcon, HeartIcon, HeartFilledIcon, BookmarkIcon,
     ShareIcon, VerifiedIcon, SearchIcon, FilterIcon, LayersIcon, LandmarkIcon,
@@ -31,7 +31,7 @@ const filterTabs = [
 export default function BookmarksPage() {
     const { requireAuth } = useAuthGate();
     const [activeFilter, setActiveFilter] = useState('all');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const [feedPosts, setFeedPosts] = useState<any[]>([]);
     const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
     const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set());
@@ -179,7 +179,7 @@ export default function BookmarksPage() {
                                 </div>
                             </div>
                         </div>
-                        <PostContent content={post.content} />
+                        <PostContent content={post.content} type={post.type} policyTitle={post.policyTitle} policyCategory={post.policyCategory} />
                         <div className="post-actions">
                             <button className="post-action" onClick={() => requireAuth(() => { })}><span className="action-icon"><MessageCircleIcon size={17} /></span><span>{formatNumber(post.comments)}</span></button>
                             <button className="post-action" onClick={() => requireAuth(() => { })}><span className="action-icon"><RepeatIcon size={17} /></span><span>{formatNumber(post.reposts)}</span></button>

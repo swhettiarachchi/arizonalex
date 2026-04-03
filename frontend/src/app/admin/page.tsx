@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
-import { users, platformStats, formatNumber } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { formatNumber } from '@/lib/utils';
 import {
     UsersIcon, BarChartIcon, ZapIcon, CheckCircleIcon, ShieldIcon, BotIcon,
     TrendingUpIcon, SearchIcon, AlertTriangleIcon, VerifiedIcon, FileTextIcon,
@@ -34,7 +34,17 @@ export default function AdminPage() {
     const [removedItems, setRemovedItems] = useState<Set<number>>(new Set());
     const [approvedItems, setApprovedItems] = useState<Set<number>>(new Set());
 
-    const filteredUsers = users.filter(u =>
+    const [allUsers, setAllUsers] = useState<any[]>([]);
+    const [pStats, setPStats] = useState({ totalUsers: 0, activeToday: 0, postsToday: 0, reportsToday: 0, aiModerationsToday: 0, newVerificationRequests: 0, serverUptime: 99.97, avgResponseTime: 42 });
+
+    useEffect(() => {
+        fetch('/api/users?limit=50')
+            .then(r => r.json())
+            .then(data => { if (data.users) setAllUsers(data.users); })
+            .catch(() => { });
+    }, []);
+
+    const filteredUsers = allUsers.filter((u: any) =>
         !userSearch || u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.username.toLowerCase().includes(userSearch.toLowerCase())
     );
 
@@ -43,29 +53,6 @@ export default function AdminPage() {
 
             {/* LEFT — Quick actions + health */}
             <aside className="home-left-panel">
-                {/* System health */}
-                <div className="ai-insights-card" style={{ marginBottom: 16 }}>
-                    <div className="ai-insights-header" style={{ marginBottom: 12 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'linear-gradient(135deg,#10b981,#059669)', padding: '3px 10px', borderRadius: 20, fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.06em' }}>
-                            <ActivityIcon size={11} /> SYSTEM STATUS
-                        </div>
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>All Systems Operational</span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                        {[
-                            { label: 'Uptime', val: `${platformStats.serverUptime}%`, color: '#10b981' },
-                            { label: 'Response', val: `${platformStats.avgResponseTime}ms`, color: '#3b82f6' },
-                            { label: 'AI Acc.', val: '97.9%', color: '#8b5cf6' },
-                            { label: 'Error Rate', val: '0.03%', color: '#f59e0b' },
-                        ].map(s => (
-                            <div key={s.label} className="ai-insight-tile">
-                                <div style={{ fontWeight: 800, fontSize: '1.1rem', color: s.color }}>{s.val}</div>
-                                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.55)' }}>{s.label}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
                 {/* Quick Actions */}
                 <div className="hp-card">
                     <div className="hp-card-title"><ZapIcon size={15} /> Quick Actions</div>
@@ -87,9 +74,9 @@ export default function AdminPage() {
                 <div className="hp-card">
                     <div className="hp-card-title"><GlobeIcon size={15} /> Platform Reach</div>
                     {[
-                        { label: 'Total Users', val: formatNumber(platformStats.totalUsers), change: '+4.2%', up: true },
-                        { label: 'Active Today', val: formatNumber(platformStats.activeToday), change: '+12%', up: true },
-                        { label: 'Posts Today', val: formatNumber(platformStats.postsToday), change: '+8%', up: true },
+                        { label: 'Total Users', val: formatNumber(pStats.totalUsers), change: '+4.2%', up: true },
+                        { label: 'Active Today', val: formatNumber(pStats.activeToday), change: '+12%', up: true },
+                        { label: 'Posts Today', val: formatNumber(pStats.postsToday), change: '+8%', up: true },
                     ].map((s, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border-light)' }}>
                             <div>
@@ -125,12 +112,12 @@ export default function AdminPage() {
                         <>
                             <div className="stats-grid" style={{ marginBottom: 20 }}>
                                 {[
-                                    { icon: <UsersIcon size={20} />, val: formatNumber(platformStats.totalUsers), label: 'Total Users', change: '+4.2%', up: true },
-                                    { icon: <ZapIcon size={20} />, val: formatNumber(platformStats.activeToday), label: 'Active Today', change: '+12%', up: true },
-                                    { icon: <FileTextIcon size={20} />, val: formatNumber(platformStats.postsToday), label: 'Posts Today', change: '+8%', up: true },
-                                    { icon: <AlertTriangleIcon size={20} />, val: String(platformStats.reportsToday), label: 'Reports', change: '-5%', up: false },
-                                    { icon: <BotIcon size={20} />, val: formatNumber(platformStats.aiModerationsToday), label: 'AI Moderations', change: '+15%', up: true },
-                                    { icon: <CheckCircleIcon size={20} />, val: String(platformStats.newVerificationRequests), label: 'Verification Req.', change: '+3', up: true },
+                                    { icon: <UsersIcon size={20} />, val: formatNumber(pStats.totalUsers), label: 'Total Users', change: '+4.2%', up: true },
+                                    { icon: <ZapIcon size={20} />, val: formatNumber(pStats.activeToday), label: 'Active Today', change: '+12%', up: true },
+                                    { icon: <FileTextIcon size={20} />, val: formatNumber(pStats.postsToday), label: 'Posts Today', change: '+8%', up: true },
+                                    { icon: <AlertTriangleIcon size={20} />, val: String(pStats.reportsToday), label: 'Reports', change: '-5%', up: false },
+                                    { icon: <BotIcon size={20} />, val: formatNumber(pStats.aiModerationsToday), label: 'AI Moderations', change: '+15%', up: true },
+                                    { icon: <CheckCircleIcon size={20} />, val: String(pStats.newVerificationRequests), label: 'Verification Req.', change: '+3', up: true },
                                 ].map((s, i) => (
                                     <div key={i} className="stat-card">
                                         <span className="stat-icon" style={{ color: 'var(--primary)' }}>{s.icon}</span>

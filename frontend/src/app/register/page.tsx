@@ -1,36 +1,144 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Script from 'next/script';
 import { useRouter } from 'next/navigation';
-import { ZapIcon, CameraIcon, ShieldIcon } from '@/components/ui/Icons';
+import { ZapIcon } from '@/components/ui/Icons';
+import FaceVerification, { FaceVerificationResult } from '@/components/ui/FaceVerification';
+
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+
+const ROLES = [
+    { value: 'citizen', label: 'Citizen' },
+    { value: 'politician', label: 'Politician' },
+    { value: 'official', label: 'Government Official' },
+    { value: 'journalist', label: 'Journalist' },
+    { value: 'businessman', label: 'Businessman' },
+    { value: 'entrepreneur', label: 'Entrepreneur' },
+    { value: 'crypto_trader', label: 'Crypto Trader' },
+    { value: 'stock_trader', label: 'Stock Trader' },
+    { value: 'banker', label: 'Banker' },
+    { value: 'doctor', label: 'Doctor' },
+    { value: 'researcher', label: 'Researcher' },
+    { value: 'academic', label: 'Academic' },
+    { value: 'lawyer', label: 'Lawyer' },
+    { value: 'judge', label: 'Judge' },
+    { value: 'activist', label: 'Activist' },
+    { value: 'celebrity', label: 'Celebrity' },
+    { value: 'other', label: 'Other' },
+];
+
+const PARTIES = [
+    'Independent', 'Democrat', 'Republican', 'Libertarian', 'Green Party', 'Other', 'None'
+];
 
 export default function RegisterPage() {
     const router = useRouter();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', username: '', bio: '', role: 'citizen', party: '' });
+    const [showPass, setShowPass] = useState(false);
+    const [gsiReady, setGsiReady] = useState(false);
+    const [faceData, setFaceData] = useState<FaceVerificationResult | null>(null);
+    const [form, setForm] = useState({
+        name: '', email: '', password: '', confirmPassword: '',
+        username: '', bio: '', role: 'citizen', party: ''
+    });
     const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
-    const handleCreate = async () => {
-        if (form.password !== form.confirmPassword) {
-            setError('Passwords do not match');
-            return;
-        }
+    const handleGoogleResponse = useCallback(async (response: { credential: string }) => {
         setLoading(true);
         setError('');
         try {
+            const res = await fetch('/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.href = '/';
+            } else {
+                setError(data.error || 'Google sign-up failed');
+            }
+        } catch {
+            setError('Network error. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!gsiReady || !GOOGLE_CLIENT_ID) return;
+        const g = (window as unknown as Record<string, unknown>).google as { accounts: { id: { initialize: (opts: Record<string, unknown>) => void; renderButton: (el: HTMLElement | null, opts: Record<string, unknown>) => void } } } | undefined;
+        if (g?.accounts?.id) {
+            g.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleGoogleResponse,
+            });
+            g.accounts.id.renderButton(
+                document.getElementById('google-signup-btn'),
+                { theme: 'outline', size: 'large', width: 400, text: 'signup_with', shape: 'rectangular' }
+            );
+        }
+    }, [gsiReady, handleGoogleResponse]);
+
+    const validateStep1 = () => {
+        if (!form.name.trim()) return 'Name is required';
+        if (!form.email.trim()) return 'Email is required';
+        if (!/\S+@\S+\.\S+/.test(form.email)) return 'Please enter a valid email';
+        if (form.password.length < 6) return 'Password must be at least 6 characters';
+        if (form.password !== form.confirmPassword) return 'Passwords do not match';
+        return '';
+    };
+
+    const validateStep2 = () => {
+        if (!form.username.trim()) return 'Username is required';
+        if (form.username.length < 3 || form.username.length > 30) return 'Username must be 3-30 characters';
+        return '';
+    };
+
+    const nextStep = () => {
+        setError('');
+        if (step === 1) {
+            const err = validateStep1();
+            if (err) { setError(err); return; }
+        }
+        if (step === 2) {
+            const err = validateStep2();
+            if (err) { setError(err); return; }
+        }
+        setStep(s => s + 1);
+    };
+
+    const prevStep = () => {
+        setError('');
+        setStep(s => s - 1);
+    };
+
+    const handleCreate = async (skipFace = false) => {
+        setLoading(true);
+        setError('');
+        try {
+            const payload: Record<string, unknown> = {
+                name: form.name,
+                email: form.email,
+                password: form.password,
+                username: form.username,
+                bio: form.bio,
+                role: form.role,
+                party: form.party,
+            };
+            if (!skipFace && faceData) {
+                payload.faceVerified = true;
+                payload.faceioId = faceData.faceioId;
+                payload.verificationScore = faceData.verificationScore;
+                payload.verificationDate = faceData.verifiedAt;
+            }
             const res = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: form.name,
-                    email: form.email,
-                    username: form.username,
-                    bio: form.bio,
-                    role: form.role,
-                    party: form.party,
-                }),
+                body: JSON.stringify(payload),
             });
             const data = await res.json();
             if (data.success) {
@@ -45,29 +153,206 @@ export default function RegisterPage() {
         }
     };
 
+    const handleFaceSuccess = (result: FaceVerificationResult) => {
+        setFaceData(result);
+        // Auto-create account after short delay
+        setTimeout(() => handleCreate(false), 1500);
+    };
+
+    const handleFaceSkip = () => {
+        handleCreate(true);
+    };
+
     return (
         <div className="auth-page">
-            <div className="auth-card fade-in" style={{ maxWidth: 480 }}>
+            <Script
+                src="https://accounts.google.com/gsi/client"
+                strategy="afterInteractive"
+                onLoad={() => setGsiReady(true)}
+            />
+            <div className="auth-card fade-in" style={{ maxWidth: 520 }}>
                 <div className="auth-logo">
                     <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', color: 'white' }}><ZapIcon size={24} /></div>
                     <h1>Join Arizonalex</h1>
-                    <p>Step {step} of 3</p>
+                    <p>Create your account</p>
                 </div>
-                <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <div style={{ width: 64, height: 64, background: 'rgba(52, 211, 153, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'var(--success)' }}>
-                        <ShieldIcon size={32} />
+
+                {/* Google Sign-Up Button */}
+                <div className="google-btn-wrap">
+                    <div id="google-signup-btn" />
+                </div>
+
+                <div className="auth-divider">or sign up with email</div>
+
+                {/* Progress Indicator — 4 Steps */}
+                <div className="register-progress">
+                    {[1, 2, 3, 4].map(s => (
+                        <div key={s} className={`register-progress-step ${s < step ? 'completed' : ''} ${s === step ? 'active' : ''}`}>
+                            <div className="register-progress-dot">
+                                {s < step ? (
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                ) : s}
+                            </div>
+                            <span className="register-progress-label">
+                                {s === 1 ? 'Account' : s === 2 ? 'Profile' : s === 3 ? 'Role' : 'Verify'}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+
+                {error && (
+                    <div className="auth-error">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                        {error}
                     </div>
-                    <h2 style={{ marginBottom: 12 }}>Registration Disabled</h2>
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
-                        Arizonalex is currently in <strong>Demo Mode</strong>.
-                        Manual account creation is restricted to maintain the integrity of the live presentation.
-                    </p>
-                    <div style={{ background: 'var(--bg-tertiary)', padding: 16, borderRadius: 12, border: '1px solid var(--border-subtle)', marginBottom: 24, fontSize: '0.9rem' }}>
-                        Please use one of our pre-seeded <strong>Demo Accounts</strong> to explore the full suite of features.
+                )}
+
+                {/* Step 1: Account Details */}
+                {step === 1 && (
+                    <div className="auth-form">
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="reg-name">Full Name</label>
+                            <div className="auth-input-wrap">
+                                <svg className="auth-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                <input id="reg-name" className="form-input auth-input-with-icon" type="text" placeholder="John Doe" value={form.name} onChange={e => update('name', e.target.value)} />
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="reg-email">Email Address</label>
+                            <div className="auth-input-wrap">
+                                <svg className="auth-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
+                                <input id="reg-email" className="form-input auth-input-with-icon" type="email" placeholder="you@example.com" value={form.email} onChange={e => update('email', e.target.value)} autoComplete="email" />
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="reg-password">Password</label>
+                            <div className="auth-input-wrap">
+                                <svg className="auth-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                                <input id="reg-password" className="form-input auth-input-with-icon" type={showPass ? 'text' : 'password'} placeholder="Min 6 characters" value={form.password} onChange={e => update('password', e.target.value)} autoComplete="new-password" />
+                                <button type="button" className="auth-eye-btn" onClick={() => setShowPass(!showPass)} tabIndex={-1}>
+                                    {showPass ? (
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                                    ) : (
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="reg-confirm">Confirm Password</label>
+                            <div className="auth-input-wrap">
+                                <svg className="auth-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                                <input id="reg-confirm" className="form-input auth-input-with-icon" type={showPass ? 'text' : 'password'} placeholder="Re-enter password" value={form.confirmPassword} onChange={e => update('confirmPassword', e.target.value)} autoComplete="new-password" />
+                            </div>
+                        </div>
+                        <button className="btn btn-primary btn-lg auth-submit-btn" onClick={nextStep}>
+                            Continue
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                        </button>
                     </div>
-                    <Link href="/login" className="btn btn-primary btn-lg" style={{ width: '100%', display: 'block' }}>
-                        Go to Demo Login
-                    </Link>
+                )}
+
+                {/* Step 2: Profile Info */}
+                {step === 2 && (
+                    <div className="auth-form">
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="reg-username">Username</label>
+                            <div className="auth-input-wrap">
+                                <span className="auth-input-icon" style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-tertiary)' }}>@</span>
+                                <input id="reg-username" className="form-input auth-input-with-icon" type="text" placeholder="johndoe" value={form.username} onChange={e => update('username', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} maxLength={30} />
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="reg-bio">Bio <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span></label>
+                            <textarea
+                                id="reg-bio"
+                                className="form-input"
+                                placeholder="Tell us about yourself..."
+                                value={form.bio}
+                                onChange={e => update('bio', e.target.value)}
+                                rows={3}
+                                maxLength={160}
+                                style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                            />
+                            <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 4 }}>{form.bio.length}/160</div>
+                        </div>
+                        <div className="auth-step-actions">
+                            <button className="btn btn-secondary btn-lg" onClick={prevStep}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+                                Back
+                            </button>
+                            <button className="btn btn-primary btn-lg" style={{ flex: 1 }} onClick={nextStep}>
+                                Continue
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 3: Role & Party */}
+                {step === 3 && (
+                    <div className="auth-form">
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="reg-role">Your Role</label>
+                            <select id="reg-role" className="form-input form-select" value={form.role} onChange={e => update('role', e.target.value)}>
+                                {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                            </select>
+                        </div>
+                        {['politician', 'official'].includes(form.role) && (
+                            <div className="form-group">
+                                <label className="form-label" htmlFor="reg-party">Political Affiliation</label>
+                                <select id="reg-party" className="form-input form-select" value={form.party} onChange={e => update('party', e.target.value)}>
+                                    <option value="">Select party</option>
+                                    {PARTIES.map(p => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                            </div>
+                        )}
+                        <div className="auth-terms">
+                            By creating an account, you agree to our{' '}
+                            <Link href="/terms" className="auth-link">Terms of Service</Link>{' '}and{' '}
+                            <Link href="/privacy" className="auth-link">Privacy Policy</Link>.
+                        </div>
+                        <div className="auth-step-actions">
+                            <button className="btn btn-secondary btn-lg" onClick={prevStep}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+                                Back
+                            </button>
+                            <button className="btn btn-primary btn-lg" style={{ flex: 1 }} onClick={nextStep}>
+                                Continue to Verify
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 4: Face Verification */}
+                {step === 4 && (
+                    <div className="auth-form">
+                        <FaceVerification
+                            onSuccess={handleFaceSuccess}
+                            onSkip={handleFaceSkip}
+                            showSkip={true}
+                        />
+                        {loading && (
+                            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                                <span className="auth-spinner" />
+                                <p style={{ color: 'var(--text-tertiary)', marginTop: 8, fontSize: '0.85rem' }}>
+                                    Creating your account…
+                                </p>
+                            </div>
+                        )}
+                        <div className="auth-step-actions" style={{ marginTop: 12 }}>
+                            <button className="btn btn-secondary btn-lg" onClick={prevStep}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+                                Back
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <div className="auth-footer">
+                    Already have an account?{' '}
+                    <Link href="/login" className="auth-link">Sign In</Link>
                 </div>
             </div>
         </div>

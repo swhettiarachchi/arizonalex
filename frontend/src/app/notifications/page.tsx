@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { notifications, users, formatNumber } from '@/lib/mock-data';
+import { formatNumber } from '@/lib/utils';
 import {
     HeartIcon, HeartFilledIcon, MessageCircleIcon, UserIcon, RepeatIcon,
     BellIcon, CheckCircleIcon, ZapIcon, ShieldIcon, GlobeIcon, UsersIcon,
@@ -11,23 +11,18 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useAuthGate } from '@/components/providers/AuthGuard';
 
 const typeIcons: Record<string, React.ReactNode> = {
-    like: <HeartFilledIcon size={15} />,
-    comment: <MessageCircleIcon size={15} />,
-    follow: <UserIcon size={15} />,
-    mention: <BellIcon size={15} />,
-    repost: <RepeatIcon size={15} />,
-    system: <ZapIcon size={15} />,
-    verification: <CheckCircleIcon size={15} />,
+    like: <HeartIcon size={18} strokeWidth={1.5} />,
+    comment: <MessageCircleIcon size={18} strokeWidth={1.5} />,
+    follow: <UserIcon size={18} strokeWidth={1.5} />,
+    mention: <BellIcon size={18} strokeWidth={1.5} />,
+    repost: <RepeatIcon size={18} strokeWidth={1.5} />,
+    system: <ZapIcon size={18} strokeWidth={1.5} />,
+    verification: <ShieldIcon size={18} strokeWidth={1.5} />,
 };
 
 const typeColors: Record<string, string> = {
-    like: '#ef4444', comment: '#3b82f6', follow: '#10b981',
-    mention: '#f59e0b', repost: '#8b5cf6', system: '#6366f1', verification: '#10b981',
-};
-
-const typeBg: Record<string, string> = {
-    like: 'rgba(239,68,68,0.1)', comment: 'rgba(59,130,246,0.1)', follow: 'rgba(16,185,129,0.1)',
-    mention: 'rgba(245,158,11,0.1)', repost: 'rgba(139,92,246,0.1)', system: 'rgba(99,102,241,0.1)', verification: 'rgba(16,185,129,0.1)',
+    like: '#ef4444', comment: 'var(--text-secondary)', follow: 'var(--text-secondary)',
+    mention: 'var(--text-secondary)', repost: 'var(--text-secondary)', system: 'var(--text-secondary)', verification: '#10b981',
 };
 
 const tabConfig = [
@@ -42,10 +37,26 @@ const tabConfig = [
 export default function NotificationsPage() {
     const { requireAuth } = useAuthGate();
     const [activeTab, setActiveTab] = useState('all');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const [items, setItems] = useState<any[]>([]);
     const [readItems, setReadItems] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
+    const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
+
+    const [settings, setSettings] = useState<Record<string, boolean>>({
+        'Likes': true,
+        'Comments': true,
+        'New Followers': true,
+        'Mentions': true,
+        'Reposts': false,
+        'System Updates': true,
+    });
+
+    const toggleSetting = (key: string) => {
+        requireAuth(() => {
+            setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+        });
+    };
 
     useEffect(() => {
         fetch('/api/notifications')
@@ -53,6 +64,10 @@ export default function NotificationsPage() {
             .then(data => { if (data.notifications) setItems(data.notifications); })
             .catch(() => { })
             .finally(() => setLoading(false));
+        fetch('/api/users?limit=4')
+            .then(r => r.json())
+            .then(data => { if (data.users) setSuggestedUsers(data.users); })
+            .catch(() => { });
     }, []);
 
     const markRead = (id: string) => setReadItems(prev => new Set(prev).add(id));
@@ -90,7 +105,7 @@ export default function NotificationsPage() {
                 {/* People you may know */}
                 <div className="hp-card">
                     <div className="hp-card-title"><UsersIcon size={15} /> People You May Know</div>
-                    {users.slice(0, 4).map(u => (
+                    {suggestedUsers.map((u: any) => (
                         <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border-light)' }}>
                             <Link href={`/profile/${u.username}`}><UserAvatar name={u.name} avatar={u.avatar} size="sm" /></Link>
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -126,10 +141,15 @@ export default function NotificationsPage() {
                 </div>
 
                 {/* Tabs */}
-                <div className="tabs" style={{ overflowX: 'auto', flexWrap: 'nowrap', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+                <div className="tabs" style={{ display: 'flex', gap: 6, padding: '12px 16px', borderBottom: '1px solid var(--border-light)', overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
                     {tabConfig.map(tab => (
-                        <button key={tab.id} className={`tab ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}
-                            style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                        <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                            style={{ 
+                                padding: '8px 16px', borderRadius: 20, fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+                                background: activeTab === tab.id ? 'var(--text-primary)' : 'var(--bg-secondary)',
+                                color: activeTab === tab.id ? 'var(--bg-primary)' : 'var(--text-secondary)',
+                                border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                            }}>
                             {tab.icon}{tab.label}
                         </button>
                     ))}
@@ -137,47 +157,90 @@ export default function NotificationsPage() {
 
                 {/* Notification items */}
                 {filtered.length === 0 ? (
-                    <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
-                        <BellIcon size={40} />
-                        <div style={{ fontSize: '1rem', fontWeight: 700, marginTop: 12, color: 'var(--text-secondary)' }}>No notifications</div>
+                    <div style={{ padding: '80px 20px', textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: 'var(--text-tertiary)' }}><BellIcon size={32} /></div>
+                        <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-secondary)' }}>You&apos;re all caught up!</div>
+                        <div style={{ fontSize: '0.85rem', marginTop: 4 }}>No new notifications to display right now.</div>
                     </div>
-                ) : filtered.map(n => (
-                    <div key={n.id}
-                        className={`notif-item ${isUnread(n) ? 'unread' : ''} fade-in`}
-                        style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', background: isUnread(n) ? 'var(--bg-secondary)' : 'transparent', transition: 'background 0.2s' }}
-                        onClick={() => requireAuth(() => markRead(n.id))}>
-                        {/* Actor avatar or type icon */}
-                        <div style={{ position: 'relative', flexShrink: 0 }}>
-                            {n.actor
-                                ? <UserAvatar name={n.actor.name} avatar={n.actor.avatar} size="sm" />
-                                : <div style={{ width: 36, height: 36, borderRadius: '50%', background: typeBg[n.type] || 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: typeColors[n.type] || 'var(--text-secondary)' }}>{typeIcons[n.type]}</div>}
-                            <div style={{ position: 'absolute', bottom: -2, right: -2, width: 18, height: 18, borderRadius: '50%', background: typeBg[n.type] || 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: typeColors[n.type] || 'var(--text-secondary)', border: '2px solid var(--bg-primary)' }}>
-                                {typeIcons[n.type]}
-                            </div>
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '0.88rem', lineHeight: 1.5 }}>
-                                {n.actor && <Link href={`/profile/${n.actor.username}`} onClick={e => e.stopPropagation()} style={{ fontWeight: 700, color: 'inherit', textDecoration: 'none' }}>{n.actor.name} </Link>}
-                                <span style={{ color: 'var(--text-secondary)' }}>{n.content}</span>
-                            </div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 3 }}>{n.timestamp}</div>
-                        </div>
-                        {isUnread(n) && <div style={{ width: 8, height: 8, background: 'var(--primary)', borderRadius: '50%', flexShrink: 0, marginTop: 8 }} />}
+                ) : (
+                    <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {['Today', 'Yesterday', 'Earlier'].map(group => {
+                            const groupItems = filtered.filter(n => {
+                                if (group === 'Today') return String(n.timestamp).includes('m ago') || String(n.timestamp).includes('h ago');
+                                if (group === 'Yesterday') return String(n.timestamp).includes('1d ago');
+                                return !String(n.timestamp).includes('m ago') && !String(n.timestamp).includes('h ago') && !String(n.timestamp).includes('1d ago');
+                            });
+
+                            if (groupItems.length === 0) return null;
+
+                            return (
+                                <div key={group}>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-secondary)', margin: '12px 0 8px 4px' }}>{group}</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                        {groupItems.map(n => (
+                                            <div key={n.id}
+                                                className={`notif-card ${isUnread(n) ? 'unread' : ''} fade-in`}
+                                                style={{ 
+                                                    display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', 
+                                                    background: isUnread(n) ? 'linear-gradient(145deg, var(--bg-card), var(--bg-secondary))' : 'var(--bg-card)', 
+                                                    border: isUnread(n) ? '1px solid var(--border)' : '1px solid var(--border-light)',
+                                                    borderRadius: 16, cursor: 'pointer', transition: 'all 0.2s',
+                                                    position: 'relative', overflow: 'hidden'
+                                                }}
+                                                onClick={() => requireAuth(() => markRead(n.id))}
+                                                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                                                
+                                                {isUnread(n) && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: 'var(--primary)' }} />}
+
+                                                <div style={{ flexShrink: 0 }}>
+                                                    {n.actor
+                                                        ? <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border)' }}><UserAvatar name={n.actor.name} avatar={n.actor.avatar} /></div>
+                                                        : <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--bg-secondary)', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: typeColors[n.type] || 'var(--text-secondary)' }}>{typeIcons[n.type]}</div>}
+                                                </div>
+
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                                                        <div style={{ fontSize: '0.92rem', lineHeight: 1.4, flex: 1 }}>
+                                                            {n.actor && (
+                                                                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginRight: 8, color: typeColors[n.type] || 'var(--text-secondary)', verticalAlign: 'text-bottom' }}>
+                                                                    {typeIcons[n.type]}
+                                                                </span>
+                                                            )}
+                                                            {n.actor && <Link href={`/profile/${n.actor.username}`} onClick={e => e.stopPropagation()} style={{ fontWeight: 700, color: 'var(--text-primary)', textDecoration: 'none' }}>{n.actor.name} </Link>}
+                                                            <span style={{ color: 'var(--text-secondary)' }}>{n.content}</span>
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', fontWeight: 500, marginTop: 2 }}>{n.timestamp}</div>
+                                                        </div>
+
+                                                        {/* Inline Interactive Actions on the right edge */}
+                                                        {n.type === 'follow' && (
+                                                            <button className="btn btn-primary btn-sm" style={{ padding: '6px 14px', fontSize: '0.8rem', borderRadius: 20, fontWeight: 600, flexShrink: 0 }} onClick={e => { e.stopPropagation(); requireAuth(() => {}); }}>Follow Back</button>
+                                                        )}
+                                                        {(n.type === 'comment' || n.type === 'mention') && (
+                                                            <button className="btn btn-outline btn-sm" style={{ padding: '6px 14px', fontSize: '0.8rem', borderRadius: 20, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }} onClick={e => { e.stopPropagation(); requireAuth(() => {}); }}>
+                                                                <MessageCircleIcon size={14} /> Reply
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
-                ))}
+                )}
             </div>
 
             {/* RIGHT — Stats & links */}
             <aside className="right-panel">
                 <div className="hp-card" style={{ marginBottom: 16 }}>
                     <div className="hp-card-title"><ShieldIcon size={15} /> Notification Settings</div>
-                    {[
-                        ['Likes', true], ['Comments', true], ['New Followers', true],
-                        ['Mentions', true], ['Reposts', false], ['System Updates', true],
-                    ].map(([label, on], i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border-light)' }}>
+                    {Object.entries(settings).map(([label, on]) => (
+                        <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border-light)' }}>
                             <span style={{ fontSize: '0.82rem', fontWeight: 500 }}>{label}</span>
-                            <button onClick={() => requireAuth(() => { })} style={{ width: 36, height: 20, borderRadius: 10, background: on ? 'var(--primary)' : 'var(--border)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                            <button onClick={() => toggleSetting(label)} style={{ width: 36, height: 20, borderRadius: 10, background: on ? 'var(--primary)' : 'var(--border)', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
                                 <div style={{ position: 'absolute', top: 2, left: on ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'left 0.2s' }} />
                             </button>
                         </div>
@@ -193,7 +256,9 @@ export default function NotificationsPage() {
                         { label: 'Politics Hub', href: '/politics' },
                         { label: 'Business Hub', href: '/business' },
                     ].map(link => (
-                        <Link key={link.label} href={link.href} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border-light)', textDecoration: 'none', color: 'inherit', fontSize: '0.85rem', fontWeight: 500 }}>
+                        <Link key={link.label} href={link.href} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 8px', margin: '0 -8px', borderBottom: '1px solid var(--border-light)', textDecoration: 'none', color: 'inherit', fontSize: '0.85rem', fontWeight: 500, borderRadius: 8, transition: 'background 0.2s' }}
+                            onMouseOver={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                            onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
                             {link.label} <ChevronRightIcon size={14} />
                         </Link>
                     ))}

@@ -98,6 +98,8 @@ export function serializePost(post: PostRecord, userId?: string) {
         reposts: post.reposts + post.repostedBy.size,
         timestamp: post.timestamp,
         hashtags: post.hashtags,
+        policyTitle: (post as any).policyTitle,
+        policyCategory: (post as any).policyCategory,
         liked: userId ? post.likedBy.has(userId) : false,
         bookmarked: userId ? post.bookmarkedBy.has(userId) : false,
         reposted: userId ? post.repostedBy.has(userId) : false,

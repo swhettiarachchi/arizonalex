@@ -354,3 +354,162 @@ export const RefreshCwIcon = ({ size = defaultProps.size, className, strokeWidth
 export const ArrowRightIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
 );
+
+export const PlayIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="5 3 19 12 5 21 5 3" /></svg>
+);
+
+export const PauseIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
+);
+
+export const SquareIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="6" y="6" width="12" height="12" rx="2" ry="2" /></svg>
+);
+
+
+export const TwitterIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+    </svg>
+);
+
+export const FacebookIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.938 5.858-5.938 1.253 0 2.443.091 2.756.13v3.155l-1.528.001c-1.55 0-1.714.654-1.714 1.733v2.497h3.297l-.634 3.667h-2.663v7.98c4.276-.838 7.5-4.57 7.5-9.11C23.691 6.84 18.851 2 12.846 2 6.84 2 2 6.84 2 12.845c0 4.54 3.224 8.272 7.101 9.111z"/>
+    </svg>
+);
+
+export const WhatsAppIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M12.031 2.052c-5.584 0-10.119 4.536-10.119 10.118 0 1.968.55 3.86 1.582 5.483L2.091 22.8l5.242-1.37a10.05 10.05 0 0 0 4.7 1.157c5.586-.002 10.118-4.538 10.118-10.121 0-2.708-1.055-5.253-2.969-7.168-1.916-1.914-4.463-2.97-7.17-2.97h-.001zh0zm.001 1.74a8.312 8.312 0 0 1 5.922 2.45c1.583 1.582 2.454 3.684 2.454 5.923 0 4.622-3.766 8.385-8.388 8.385-.001 0-.001 0 0 0a8.337 8.337 0 0 1-4.246-1.156l-.304-.18-3.15.823.839-3.07-.198-.315A8.32 8.32 0 0 1 3.655 12.17c0-4.621 3.764-8.38 8.386-8.38h-.001h.001zm-3.953 3.99c-.198 0-.518.075-.788.375-.271.301-1.036 1.011-1.036 2.463 0 1.455 1.06 2.87 1.206 3.067.147.195 2.062 3.25 5.093 4.453 2.529 1.002 2.973.801 3.486.751.514-.051 1.658-.677 1.89-1.328.23-.652.23-1.21.161-1.328-.067-.119-.248-.194-.518-.344-.27-.15-1.604-.792-1.85-.883-.247-.091-.429-.136-.607.135-.181.272-.693.884-.849 1.065-.157.182-.314.204-.585.054-.269-.15-1.144-.422-2.181-1.344-.805-.718-1.347-1.603-1.503-1.873-.156-.271-.017-.417.118-.553.121-.122.27-.315.405-.472.135-.157.18-.27.271-.45.092-.18.046-.345-.021-.495-.068-.15-.607-1.465-.83-2.007-.217-.525-.436-.454-.607-.463l-.517-.008z"/>
+    </svg>
+);
+
+export const CopyIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+    </svg>
+);
+
+export const QrCodeIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect width="5" height="5" x="3" y="3" rx="1"/>
+        <rect width="5" height="5" x="16" y="3" rx="1"/>
+        <rect width="5" height="5" x="3" y="16" rx="1"/>
+        <path d="M21 16h-3a2 2 0 0 0-2 2v3"/>
+        <path d="M21 21v.01"/>
+        <path d="M12 7v3a2 2 0 0 1-2 2H7"/>
+        <path d="M3 12h.01"/>
+        <path d="M12 3h.01"/>
+        <path d="M12 16v.01"/>
+        <path d="M16 12h1"/>
+        <path d="M21 12v.01"/>
+        <path d="M12 21v-1"/>
+    </svg>
+);
+
+export const BitcoinIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M11.767 19.089c4.924.869 6.176-6.002 5.682-7.105-.974-2.176-4.24-2.115-4.24-2.115s3.473-1.04 3.195-3.111c-.39-2.92-3.328-2.673-3.328-2.673l.666-2.617-1.631-.286-.632 2.478c-.446-.078-.9-.148-1.353-.211l.64-2.502-1.632-.286-.653 2.569c-.546-.08-1.071-.143-1.579-.199l-2.072-.363-.399 1.565s1.116.17 1.093.193c.608.107.72.509.696.81l-1.393 5.485c-.042.062-.124.153-.306.121.026.027-1.094-.192-1.094-.192l-.744 1.706 1.956.343c.49.087.962.181 1.428.27l-.664 2.611 1.632.286.64-2.511c.465.093.91.173 1.341.246l-.64 2.51 1.632.286.671-2.641z"/><path d="M10.161 8.76v.001l2.434.427c.866.152 1.489.816 1.332 1.714-.16.923-1.002 1.107-1.693 1.03l-2.46-.421-.527 2.067 2.871.503c1.192.209 2.146-.665 2.385-1.597.23-1.046-.226-2.138-1.428-2.522z"/></svg>
+);
+
+export const PlayCircleIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" /></svg>
+);
+
+export const XCircleIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+);
+
+export const KeyIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.78 7.78 5.5 5.5 0 0 1 7.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" /></svg>
+);
+
+export const MonitorIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+);
+
+export const PinIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24z" /></svg>
+);
+
+export const BellOffIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5" /><path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+);
+
+export const ArchiveIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="21 8 21 21 3 21 3 8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" /></svg>
+);
+
+
+export const ShieldOffIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19.69 14a6.9 6.9 0 0 0 .31-2V5l-8-3-3.16 1.18" /><path d="M4.73 4.73L4 5v7c0 6 8 10 8 10a20.29 20.29 0 0 0 5.62-4.38" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+);
+
+
+export const TrashIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+);
+
+export const ReplyIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
+);
+
+export const EditIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+);
+
+// ── Debate-to-Earn Icons ──
+
+export const SwordsIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.5 17.5L3 6V3h3l11.5 11.5" /><path d="M13 19l6-6" /><path d="M16 16l4 4" /><path d="M19 21l2-2" /><path d="M14.5 6.5L18 3h3v3l-3.5 3.5" /><path d="M5 14l4 4" /><path d="M7 17l-3 3" /></svg>
+);
+
+export const WalletIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4z" /></svg>
+);
+
+export const TrophyIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></svg>
+);
+
+export const TimerIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="10" y1="2" x2="14" y2="2" /><line x1="12" y1="14" x2="12" y2="8" /><circle cx="12" cy="14" r="8" /></svg>
+);
+
+export const AwardIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="8" r="7" /><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" /></svg>
+);
+
+export const CoinsIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="8" cy="8" r="6" /><path d="M18.09 10.37A6 6 0 1 1 10.34 18" /><path d="M7 6h1v4" /><path d="M16.71 13.88l.7.71-2.82 2.82" /></svg>
+);
+
+export const ChevronLeftIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="15 18 9 12 15 6" /></svg>
+);
+
+export const LanguageIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m5 8 6 6" /><path d="m4 14 6-6 2-3" /><path d="M2 5h12" /><path d="M7 2h1" /><path d="m22 22-5-10-5 10" /><path d="M14 18h6" /></svg>
+);
+
+export const CrownIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z" /><path d="M5 16h14v3H5z" /></svg>
+);
+
+export const MapIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></svg>
+);
+
+export const RadioIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="2" /><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14" /></svg>
+);
+
+export const GiftIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><line x1="12" y1="22" x2="12" y2="7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></svg>
+);
+
+export const TagIcon = ({ size = defaultProps.size, className, strokeWidth = defaultProps.strokeWidth }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></svg>
+);

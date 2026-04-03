@@ -1,0 +1,93 @@
+
+> arizonalex@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 23.4s
+  Running TypeScript ...
+  Collecting page data using 3 workers ...
+  Generating static pages using 3 workers (0/61) ...
+  Generating static pages using 3 workers (15/61) 
+  Generating static pages using 3 workers (30/61) 
+  Generating static pages using 3 workers (45/61) 
+✓ Generating static pages using 3 workers (61/61) in 1243.7ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /admin
+├ ○ /ai-tools
+├ ƒ /api/agora/token
+├ ƒ /api/auth/google
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/me
+├ ƒ /api/auth/register
+├ ƒ /api/auth/verify-face
+├ ƒ /api/avatar
+├ ƒ /api/business/companies
+├ ƒ /api/business/deals
+├ ƒ /api/business/news
+├ ƒ /api/business/sectors
+├ ƒ /api/business/stats
+├ ƒ /api/crypto
+├ ƒ /api/global-politics/countries
+├ ƒ /api/global-politics/country/[slug]
+├ ƒ /api/global-politics/rising
+├ ƒ /api/global-politics/trending
+├ ƒ /api/market-data
+├ ƒ /api/messages
+├ ƒ /api/messages/[id]
+├ ƒ /api/news
+├ ƒ /api/news/unified
+├ ƒ /api/notifications
+├ ƒ /api/notifications/read-all
+├ ƒ /api/politics/bills
+├ ƒ /api/politics/events
+├ ƒ /api/politics/polls
+├ ƒ /api/politics/promises
+├ ƒ /api/politics/stats
+├ ƒ /api/posts
+├ ƒ /api/posts/[id]
+├ ƒ /api/posts/[id]/bookmark
+├ ƒ /api/posts/[id]/like
+├ ƒ /api/posts/[id]/repost
+├ ƒ /api/search
+├ ƒ /api/users/follow
+├ ƒ /api/worldbank
+├ ○ /bookmarks
+├ ○ /business
+├ ○ /contact
+├ ○ /create-post
+├ ○ /crypto
+├ ○ /explore
+├ ○ /faq
+├ ○ /global-politics
+├ ƒ /global-politics/country/[slug]
+├ ○ /guidelines
+├ ○ /help
+├ ƒ /help/[category]
+├ ƒ /help/article/[id]
+├ ○ /login
+├ ○ /messages
+├ ○ /news
+├ ○ /notifications
+├ ○ /politics
+├ ○ /privacy
+├ ○ /profile
+├ ƒ /profile/[username]
+├ ○ /register
+├ ○ /report
+├ ○ /status
+├ ○ /terms
+├ ○ /verify
+└ ○ /verify-face
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

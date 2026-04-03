@@ -1,9 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { EyeIcon, EyeOffIcon, ZapIcon } from '@/components/ui/Icons';
+import { ZapIcon, EyeIcon, EyeOffIcon, ShieldIcon, ArrowLeftIcon } from '@/components/ui/Icons';
+
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -13,6 +16,95 @@ export default function LoginPage() {
     const [showPass, setShowPass] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [gsiReady, setGsiReady] = useState(false);
+
+    // 2FA state
+    const [requires2FA, setRequires2FA] = useState(false);
+    const [tempToken, setTempToken] = useState('');
+    const [otpCode, setOtpCode] = useState('');
+    const [devOtp, setDevOtp] = useState('');
+
+    const handleGoogleResponse = useCallback(async (response: { credential: string }) => {
+        setLoading(true);
+        setError('');
+        try {
+            const res = await fetch('/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.href = '/';
+            } else {
+                setError(data.error || 'Google login failed');
+            }
+        } catch {
+            setError('Network error. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!gsiReady || !GOOGLE_CLIENT_ID) return;
+        const g = (window as unknown as Record<string, unknown>).google as { accounts: { id: { initialize: (opts: Record<string, unknown>) => void; renderButton: (el: HTMLElement | null, opts: Record<string, unknown>) => void } } } | undefined;
+        if (g?.accounts?.id) {
+            g.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleGoogleResponse,
+            });
+            g.accounts.id.renderButton(
+                document.getElementById('google-signin-btn'),
+                { theme: 'outline', size: 'large', width: 360, text: 'signin_with', shape: 'rectangular' }
+            );
+        }
+    }, [gsiReady, handleGoogleResponse]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email || !password) {
+            setError('Please fill in all fields');
+            return;
+        }
+        setLoading(true);
+        setError('');
+        const result = await login(email, password);
+        setLoading(false);
+        if (result.success) {
+            if (result.requires2FA && result.tempToken) {
+                setRequires2FA(true);
+                setTempToken(result.tempToken);
+                if (result.devOtp) setDevOtp(result.devOtp);
+            } else {
+                router.push('/');
+            }
+        } else {
+            setError(result.error || 'Login failed. Please try again.');
+        }
+    };
+
+    const handle2FAVerify = async () => {
+        if (!otpCode) { setError('Please enter the verification code'); return; }
+        setLoading(true);
+        setError('');
+        try {
+            const res = await fetch('/api/auth/verify-2fa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tempToken, code: otpCode }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.href = '/';
+            } else {
+                setError(data.message || data.error || 'Invalid code');
+            }
+        } catch {
+            setError('Network error');
+        }
+        setLoading(false);
+    };
 
     const handleDemoLogin = async (demoEmail: string) => {
         setLoading(true);
@@ -20,35 +112,184 @@ export default function LoginPage() {
         const result = await login(demoEmail, 'password123');
         setLoading(false);
         if (result.success) {
-            router.push('/');
+            if (result.requires2FA && result.tempToken) {
+                setRequires2FA(true);
+                setTempToken(result.tempToken);
+                if (result.devOtp) setDevOtp(result.devOtp);
+            } else {
+                router.push('/');
+            }
         } else {
             setError(result.error || 'Demo login failed. Please try again.');
         }
     };
 
+    // ── 2FA Verification Screen ──
+    if (requires2FA) {
+        return (
+            <div className="auth-page">
+                <div className="auth-card fade-in">
+                    <div className="auth-logo">
+                        <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', color: 'white' }}><ShieldIcon size={24} /></div>
+                        <h1>Two-Factor Verification</h1>
+                        <p>Enter the verification code sent to your email</p>
+                    </div>
+
+                    {devOtp && (
+                        <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', fontSize: '0.82rem', color: '#a78bfa', textAlign: 'center', marginBottom: 16 }}>
+                            Dev OTP: <strong>{devOtp}</strong>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="auth-error">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="otp-code">Verification Code</label>
+                            <input
+                                id="otp-code"
+                                className="form-input"
+                                type="text"
+                                placeholder="000000"
+                                value={otpCode}
+                                onChange={e => setOtpCode(e.target.value)}
+                                maxLength={8}
+                                style={{ letterSpacing: 4, textAlign: 'center', fontWeight: 700, fontSize: '1.2rem' }}
+                                autoFocus
+                            />
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', marginTop: 6 }}>You can also use a backup code</p>
+                        </div>
+
+                        <button
+                            onClick={handle2FAVerify}
+                            className="btn btn-primary btn-lg auth-submit-btn"
+                            disabled={loading}
+                        >
+                            {loading ? <span className="auth-spinner" /> : 'Verify & Sign In'}
+                        </button>
+                    </div>
+
+                    <div className="auth-footer">
+                        <button onClick={() => { setRequires2FA(false); setTempToken(''); setOtpCode(''); setDevOtp(''); setError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <ArrowLeftIcon size={14} /> Back to login
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ── Main Login Screen ──
     return (
         <div className="auth-page">
+            <Script
+                src="https://accounts.google.com/gsi/client"
+                strategy="afterInteractive"
+                onLoad={() => setGsiReady(true)}
+            />
             <div className="auth-card fade-in">
                 <div className="auth-logo">
                     <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', color: 'white' }}><ZapIcon size={24} /></div>
                     <h1>Arizonalex</h1>
-                    <p>The Political Social Platform</p>
-                </div>
-                <div className="oauth-buttons" style={{ marginTop: 24 }}>
-                    <button className="oauth-btn" onClick={() => handleDemoLogin('sarah@arizonalex.com')} disabled={loading}><svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg> Login as Senator Sarah</button>
-                    <button className="oauth-btn" onClick={() => handleDemoLogin('admin@arizonalex.com')} disabled={loading}><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" /></svg> Login as Admin</button>
-                    <button className="oauth-btn" onClick={() => handleDemoLogin('alex@arizonalex.com')} disabled={loading}><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" /></svg> Login as Citizen User</button>
+                    <p>The Premier Network for Politics, Business & Crypto</p>
                 </div>
 
-                {error && (
-                    <div style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', borderRadius: 8, padding: '10px 14px', fontSize: '0.85rem', margin: '16px 0 8px', border: '1px solid rgba(239,68,68,0.2)' }}>
-                        {error}
+                {/* Google Sign-In Button */}
+                <div className="google-btn-wrap">
+                    <div id="google-signin-btn" />
+                </div>
+
+                <div className="auth-divider">or sign in with email</div>
+
+                <form onSubmit={handleSubmit} className="auth-form">
+                    <div className="form-group">
+                        <label className="form-label" htmlFor="login-email">Email Address</label>
+                        <div className="auth-input-wrap">
+                            <svg className="auth-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
+                            <input
+                                id="login-email"
+                                className="form-input auth-input-with-icon"
+                                type="email"
+                                placeholder="you@example.com"
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                autoComplete="email"
+                            />
+                        </div>
                     </div>
-                )}
+                    <div className="form-group">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <label className="form-label" htmlFor="login-password">Password</label>
+                            <Link href="/forgot-password" style={{ fontSize: '0.78rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>Forgot Password?</Link>
+                        </div>
+                        <div className="auth-input-wrap">
+                            <svg className="auth-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                            <input
+                                id="login-password"
+                                className="form-input auth-input-with-icon"
+                                type={showPass ? 'text' : 'password'}
+                                placeholder="Enter your password"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                autoComplete="current-password"
+                            />
+                            <button
+                                type="button"
+                                className="auth-eye-btn"
+                                onClick={() => setShowPass(!showPass)}
+                                tabIndex={-1}
+                                aria-label={showPass ? 'Hide password' : 'Show password'}
+                            >
+                                {showPass ? <EyeOffIcon size={18} /> : <EyeIcon size={18} />}
+                            </button>
+                        </div>
+                    </div>
 
-                <div style={{ textAlign: 'center', marginTop: 32, fontSize: '0.85rem', color: 'var(--text-secondary)', padding: '16px', borderTop: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
-                    <div style={{ fontWeight: 600, color: 'var(--primary)', marginBottom: 4 }}>Demo Mode Active</div>
-                    Select an identity above to explore the platform. Manual registration is currently disabled.
+                    {error && (
+                        <div className="auth-error">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                            {error}
+                        </div>
+                    )}
+
+                    <button
+                        type="submit"
+                        className="btn btn-primary btn-lg auth-submit-btn"
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <span className="auth-spinner" />
+                        ) : (
+                            'Sign In'
+                        )}
+                    </button>
+                </form>
+
+                <div className="auth-divider">demo accounts</div>
+
+                <div className="oauth-buttons">
+                    <button className="oauth-btn" onClick={() => handleDemoLogin('sarah@arizonalex.com')} disabled={loading}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                        Senator Sarah (Demo)
+                    </button>
+                    <button className="oauth-btn" onClick={() => handleDemoLogin('admin@arizonalex.com')} disabled={loading}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                        Admin (Demo)
+                    </button>
+                    <button className="oauth-btn" onClick={() => handleDemoLogin('alex@arizonalex.com')} disabled={loading}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                        Citizen User (Demo)
+                    </button>
+                </div>
+
+                <div className="auth-footer">
+                    Don&apos;t have an account?{' '}
+                    <Link href="/register" className="auth-link">Create Account</Link>
                 </div>
             </div>
         </div>

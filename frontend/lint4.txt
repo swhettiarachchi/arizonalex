@@ -1,0 +1,51 @@
+
+> arizonalex@0.1.0 lint
+> eslint
+
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\global-politics\country\[slug]\page.tsx
+  186:6  warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\help\article\[id]\page.tsx
+  118:115  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  118:131  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\messages\page.tsx
+  284:8   warning  React Hook useEffect has a missing dependency: 'activeChat'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               react-hooks/exhaustive-deps
+  330:25  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-use-before-define')
+  331:25  error    Error: Cannot access variable before it is declared
+
+`sendVoiceMessage` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\messages\page.tsx:331:25
+  329 |                         const mockBase64 = "data:audio/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAARh4EBBwE=";
+  330 |                         // eslint-disable-next-line @typescript-eslint/no-use-before-define
+> 331 |                         sendVoiceMessage(mockBase64);
+      |                         ^^^^^^^^^^^^^^^^ `sendVoiceMessage` accessed before it is declared
+  332 |                     },
+  333 |                     stream: { getTracks: () => [] }
+  334 |                 } as unknown as MediaRecorder;
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\messages\page.tsx:404:5
+  402 |
+  403 |     /* ─── Send Voice Message ─── */
+> 404 |     async function sendVoiceMessage(base64Audio: string) {
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 405 |         if (!activeChat) return;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 406 |         const msgCopy = `[AUDIO]:${base64Audio}`;
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 423 |         }
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 424 |     };
+      | ^^^^^^ `sendVoiceMessage` is declared here
+  425 |
+  426 |     /* ─── File Attachment Handling ─── */
+  427 |     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {  react-hooks/immutability
+  340:8   warning  React Hook useCallback has a missing dependency: 'sendVoiceMessage'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       react-hooks/exhaustive-deps
+  363:8   warning  React Hook useCallback has a missing dependency: 'sendVoiceMessage'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       react-hooks/exhaustive-deps
+
+✖ 8 problems (3 errors, 5 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

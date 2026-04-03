@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { economicIndicators } from '@/lib/mock-data';
 
 async function fetchQuote(ticker: string) {
     try {
@@ -29,7 +28,6 @@ async function fetchQuote(ticker: string) {
 }
 
 export async function GET() {
-    // Top 5 Sectors mapping to standard SPDR ETFs for proxy live data
     const sectorMap = [
         { ticker: 'XLK', name: 'Technology', marketCap: '$14.2T' },
         { ticker: 'XLV', name: 'Healthcare', marketCap: '$6.8T' },
@@ -38,36 +36,42 @@ export async function GET() {
         { ticker: 'XLRE', name: 'Real Estate', marketCap: '$2.4T' }
     ];
 
-    const [spxQuote, ...sectorQuotes] = await Promise.all([
+    const [spxQuote, dowQuote, nasdaqQuote, oilQuote, ...sectorQuotes] = await Promise.all([
         fetchQuote('%5EGSPC'),
+        fetchQuote('%5EDJI'),
+        fetchQuote('%5EIXIC'),
+        fetchQuote('CL=F'),
         ...sectorMap.map(s => fetchQuote(s.ticker))
     ]);
 
-    const spxPrice = spxQuote?.price?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatPrice = (q: any) => q?.price?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? 'N/A';
+    const formatChangePct = (q: any) => q ? `${q.changePct >= 0 ? '+' : ''}${q.changePct.toFixed(2)}%` : 'N/A';
+    const isUp = (q: any) => q ? q.changePct >= 0 : true;
 
     const marketStats = [
-        { icon: 'DollarSignIcon', val: '$38.5T', label: 'Total Market Cap', change: '+2.1%', up: true },
-        { icon: 'TrendingUpIcon', val: spxPrice ?? '5,842.31', label: 'S&P 500', change: spxQuote ? 'Live' : '+1.24%', up: true },
-        { icon: 'ScaleIcon', val: '$51.4B', label: 'M&A Volume MTD', change: '+34%', up: true },
-        { icon: 'ActivityIcon', val: '3', label: 'IPOs This Month', change: 'Upcoming', up: true },
+        { icon: 'TrendingUpIcon', val: formatPrice(spxQuote), label: 'S&P 500', change: formatChangePct(spxQuote), up: isUp(spxQuote) },
+        { icon: 'BarChartIcon', val: formatPrice(dowQuote), label: 'DOW JONES', change: formatChangePct(dowQuote), up: isUp(dowQuote) },
+        { icon: 'ActivityIcon', val: formatPrice(nasdaqQuote), label: 'NASDAQ', change: formatChangePct(nasdaqQuote), up: isUp(nasdaqQuote) },
+        { icon: 'DollarSignIcon', val: formatPrice(oilQuote), label: 'Crude Oil', change: formatChangePct(oilQuote), up: isUp(oilQuote) },
     ];
 
     const liveSectorPerformance = sectorMap.map((s, idx) => {
         const quote = sectorQuotes[idx];
         const isPositive = quote ? quote.changePct >= 0 : true;
-        const ytd = quote ? `${isPositive ? '+' : ''}${quote.changePct.toFixed(2)}%` : '+0.00%';
-
-        return {
-            sector: s.name,
-            marketCap: s.marketCap,
-            ytd: ytd,
-            positive: isPositive
-        };
+        const ytd = quote ? `${isPositive ? '+' : ''}${quote.changePct.toFixed(2)}%` : 'N/A';
+        return { sector: s.name, marketCap: s.marketCap, ytd, positive: isPositive };
     });
+
+    const economicIndicators = [
+        { id: 'e1', label: 'GDP Growth Rate', value: '2.1%', change: '+0.3%', positive: true, period: 'Q4 2025' },
+        { id: 'e2', label: 'Inflation (CPI)', value: '3.1%', change: '-0.2%', positive: true, period: 'Feb 2026' },
+        { id: 'e3', label: 'Unemployment Rate', value: '4.2%', change: '+0.1%', positive: false, period: 'Feb 2026' },
+        { id: 'e4', label: 'Fed Funds Rate', value: '4.50%', change: '0.0%', positive: true, period: 'Current' },
+    ];
 
     return NextResponse.json({
         marketStats,
         sectorPerformance: liveSectorPerformance,
-        economicIndicators: economicIndicators.slice(0, 4)
+        economicIndicators
     });
 }

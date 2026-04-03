@@ -18,6 +18,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: data.message || 'Login failed' }, { status: res.status });
         }
 
+        // 2FA required — forward tempToken without setting cookies
+        if (data.requires2FA) {
+            return NextResponse.json({
+                success: true,
+                requires2FA: true,
+                tempToken: data.tempToken,
+                message: data.message,
+                devOtp: data.devOtp,
+            });
+        }
+
         const user = data.user;
         const response = NextResponse.json({ success: true, user: { ...user, id: user._id || user.id } });
 

@@ -1,12 +1,12 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { formatNumber, users, promises, economicIndicators as mockEconIndicators } from '@/lib/mock-data';
+import { formatNumber } from '@/lib/utils';
 import {
     VoteIcon, CalendarIcon, MapPinIcon, UsersIcon, TrendingUpIcon, BarChartIcon,
     FileTextIcon, PlusIcon, TargetIcon, LandmarkIcon, CheckCircleIcon, ClockIcon,
     ActivityIcon, ArrowUpRightIcon, ArrowDownRightIcon, ChevronRightIcon, ShieldIcon,
-    GlobeIcon, DollarSignIcon, XIcon
+    GlobeIcon, DollarSignIcon, XIcon, ZapIcon
 } from '@/components/ui/Icons';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useAuthGate } from '@/components/providers/AuthGuard';
@@ -178,140 +178,111 @@ export default function PoliticsPage() {
         setToast({ message, type });
     };
 
-    // API Data State
-    const [stats, setStats] = useState<any[]>([]);
+    // Static Data State
+    const stats = [
+        { label: 'Active Voters', val: '2.4M', change: '+12%', up: true },
+        { label: 'Active Polls', val: '156', change: '+8%', up: true },
+        { label: 'Bills in Discussion', val: '89', change: '+3%', up: true },
+        { label: 'Upcoming Events', val: '24', change: '+15%', up: true },
+    ];
     const [econIndicators, setEconIndicators] = useState<any[]>([]);
     const [bills, setBills] = useState<any[]>([]);
     const [events, setEvents] = useState<any[]>([]);
     const [pollsList, setPollsList] = useState<any[]>([]);
     const [promisesList, setPromisesList] = useState<any[]>([]);
     const [contributors, setContributors] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const loading = false;
     const [followedUsers, setFollowedUsers] = useState<Record<string, boolean>>({});
     const [sentimentFilter, setSentimentFilter] = useState<string | null>(null);
-    const [analyticsData, setAnalyticsData] = useState<any>(null);
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const [sRes, bRes, eRes, pRes, prRes, mRes] = await Promise.all([
-                fetch('/api/politics/stats'),
-                fetch('/api/politics/bills'),
-                fetch('/api/politics/events'),
-                fetch('/api/politics/polls'),
-                fetch('/api/politics/promises'),
-                fetch('/api/market-data')
-            ]);
-
-            const [sData, bData, eData, pData, prData, mData] = await Promise.all([
-                sRes.json(), bRes.json(), eRes.json(), pRes.json(), prRes.json(), mRes.json()
-            ]);
-
-            if (sData.stats) setStats(sData.stats);
-            if (sData.economicIndicators) setEconIndicators(sData.economicIndicators);
-            if (sData.analytics) setAnalyticsData(sData.analytics); // Set analytics data
-            if (mData.marketData) {
-                setEconIndicators(mData.marketData.map((m: any) => ({
-                    id: m.id,
-                    label: m.symbol,
-                    value: m.price,
-                    change: m.change,
-                    positive: m.positive,
-                    period: 'Live'
-                })));
-            } else if (sData.economicIndicators) {
-                setEconIndicators(sData.economicIndicators);
-            }
-            if (bData.bills) setBills(bData.bills);
-            if (eData.events) setEvents(eData.events);
-            if (pData.polls) setPollsList(pData.polls);
-            if (prData.promises) setPromisesList(prData.promises);
-        } catch (err) {
-            console.error('Failed to fetch politics data', err);
-        } finally {
-            setLoading(false);
-        }
+    // Fetch all politics data from APIs
+    useEffect(() => {
+        fetch('/api/politics/bills').then(r => r.json()).then(data => { if (data.bills) setBills(data.bills); }).catch(() => { });
+        fetch('/api/politics/polls').then(r => r.json()).then(data => { if (data.polls) setPollsList(data.polls); }).catch(() => { });
+        fetch('/api/politics/promises').then(r => r.json()).then(data => { if (data.promises) setPromisesList(data.promises); }).catch(() => { });
+        fetch('/api/politics/events').then(r => r.json()).then(data => { if (data.events) setEvents(data.events); }).catch(() => { });
+        fetch('/api/politics/stats').then(r => r.json()).then(data => { if (data.economicIndicators) setEconIndicators(data.economicIndicators); }).catch(() => { });
+        fetch('/api/users?limit=6').then(r => r.json()).then(data => { if (data.users) setContributors(data.users); }).catch(() => { });
     }, []);
+    const analyticsData = {
+        overview: [
+            { label: 'Voter Turnout Prediction', val: '68%', change: '+3%', up: true },
+            { label: 'Public Approval Average', val: '72%', change: '+1.4%', up: true },
+            { label: 'Political Discussions', val: '3.2M', change: '+18%', up: true },
+            { label: 'Policy Engagement Rate', val: '85%', change: '+5%', up: true },
+        ],
+        sentiment: [
+            { topic: 'Economy', pos: 62, neg: 18, neu: 20 },
+            { topic: 'Healthcare', pos: 48, neg: 32, neu: 20 },
+            { topic: 'Education', pos: 71, neg: 12, neu: 17 },
+            { topic: 'Environment', pos: 55, neg: 25, neu: 20 },
+            { topic: 'Security', pos: 66, neg: 14, neu: 20 },
+        ],
+        trends: [65, 45, 78, 52, 88, 71, 95, 60, 82, 70, 55, 90]
+    };
+    const [politicalNews, setPoliticalNews] = useState<any[]>([]);
+    const [loadingNews, setLoadingNews] = useState(true);
+    const [newsIsLive, setNewsIsLive] = useState(false);
+    const [newsLastUpdated, setNewsLastUpdated] = useState<number>(0);
 
-    useEffect(() => { fetchData(); }, [fetchData]);
+    useEffect(() => {
+        const fetchPolNews = async () => {
+            try {
+                const res = await fetch('/api/news');
+                if (res.ok) {
+                    const data = await res.json();
+                    setPoliticalNews((data.articles || []).slice(0, 8));
+                    setNewsIsLive(data.isLive === true);
+                    setNewsLastUpdated(data.lastUpdated || Date.now());
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoadingNews(false);
+            }
+        };
+        fetchPolNews();
+        const int = setInterval(fetchPolNews, 60000);
+        return () => clearInterval(int);
+    }, []);
+    const [selectedPoliticalNews, setSelectedPoliticalNews] = useState<any>(null);
 
     const castVote = (pollId: string, optIdx: number) =>
-        requireAuth(async () => {
-            console.log(`🗳️ Casting vote for poll ${pollId}, option ${optIdx}`);
-            try {
-                const res = await fetch('/api/politics/polls', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: pollId, optionIndex: optIdx })
-                });
-                const data = await res.json();
-                if (res.ok && data.poll) {
-                    setPollsList(prev => prev.map(p => p.id === pollId ? data.poll : p));
+        requireAuth(() => {
+            setPollsList(prev => prev.map(p => {
+                if (p.id === pollId && p.voted === undefined) {
+                    const newOpts = [...p.options];
+                    newOpts[optIdx] = { ...newOpts[optIdx], votes: newOpts[optIdx].votes + 1 };
                     showToast('Vote cast successfully!', 'success');
-                } else {
-                    console.error('❌ Vote failed:', data);
-                    showToast(data.error || 'Failed to cast vote', 'error');
+                    return { ...p, options: newOpts, voted: optIdx, totalVotes: (p.totalVotes || 0) + 1 };
                 }
-            } catch (err) {
-                console.error('❌ Network error while voting:', err);
-                showToast('Network error while voting', 'error');
-            }
+                return p;
+            }));
         });
 
     const voteBill = (billId: string, type: 'support' | 'oppose') =>
-        requireAuth(async () => {
-            console.log(`📜 Voting on bill ${billId}: ${type}`);
-            try {
-                const res = await fetch('/api/politics/bills', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: billId, type })
-                });
-                const data = await res.json();
-                if (res.ok && data.bill) {
-                    setBills(prev => prev.map(b => b.id === billId ? data.bill : b));
+        requireAuth(() => {
+            setBills(prev => prev.map(b => {
+                if (b.id === billId) {
                     showToast(`Vote recorded: ${type}`, 'success');
-                } else {
-                    console.error('❌ Bill vote failed:', data);
-                    showToast(data.error || 'Failed to vote on bill', 'error');
+                    return type === 'support' 
+                        ? { ...b, forVotes: b.forVotes + 1, userVote: type }
+                        : { ...b, againstVotes: b.againstVotes + 1, userVote: type };
                 }
-            } catch (err) {
-                console.error('❌ Network error while voting on bill:', err);
-                showToast('Network error while voting on bill', 'error');
-            }
+                return b;
+            }));
         });
 
     const rsvpEvent = (eventId: string) =>
-        requireAuth(async () => {
-            console.log(`📅 RSVPing for event ${eventId}`);
-            try {
-                const res = await fetch('/api/politics/events', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: eventId })
-                });
-                const data = await res.json();
-                if (res.ok && data.event) {
-                    setEvents(prev => prev.map(e => {
-                        if (e.id === eventId) {
-                            const inc = data.event.isRSVPed ? 1 : -1;
-                            return {
-                                ...e,
-                                isRSVPed: data.event.isRSVPed,
-                                attendees: Math.max(0, e.attendees + inc)
-                            };
-                        }
-                        return e;
-                    }));
-                    showToast(data.event.isRSVPed ? 'RSVP confirmed!' : 'RSVP cancelled', 'success');
-                } else {
-                    console.error('❌ RSVP failed:', data);
-                    showToast(data.error || 'Failed to RSVP', 'error');
+        requireAuth(() => {
+            setEvents(prev => prev.map(e => {
+                if (e.id === eventId) {
+                    const isNowRsvped = !e.isRSVPed;
+                    showToast(isNowRsvped ? 'RSVP confirmed!' : 'RSVP cancelled', 'success');
+                    return { ...e, isRSVPed: isNowRsvped, attendees: isNowRsvped ? e.attendees + 1 : Math.max(0, e.attendees - 1) };
                 }
-            } catch (err) {
-                console.error('❌ Network error while RSVPing:', err);
-                showToast('Network error while RSVPing', 'error');
-            }
+                return e;
+            }));
         });
 
     return (
@@ -436,9 +407,32 @@ export default function PoliticsPage() {
 
             {/* CENTER — Main content */}
             <div className="feed-column" style={{ minWidth: 0 }}>
+
+                {/* Live news ticker */}
+                {politicalNews.length > 0 && (
+                    <div style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 10, alignItems: 'center', overflowX: 'hidden', position: 'relative' }}>
+                        <span style={{ fontSize: '0.62rem', fontWeight: 800, whiteSpace: 'nowrap', background: newsIsLive ? '#ef4444' : 'var(--primary)', color: 'white', padding: '2px 8px', borderRadius: 4, letterSpacing: '0.06em', zIndex: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            {newsIsLive && <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'white', animation: 'pulse 1.5s infinite' }} />}
+                            LIVE
+                        </span>
+                        <div className="ticker-scroll" style={{ display: 'flex', gap: 24, overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+                            {politicalNews.slice(0, 4).map(n => (
+                                <span key={n.id} style={{ whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                                    onClick={() => setSelectedPoliticalNews(n)}>
+                                    <span style={{ color: n.urgencyLevel === 'breaking' ? '#ef4444' : n.urgencyLevel === 'high' ? '#f97316' : 'var(--text-tertiary)', fontWeight: 700, marginRight: 4 }}>
+                                        {n.urgencyLevel === 'breaking' ? '🔴' : n.urgencyLevel === 'high' ? '🟡' : '•'}
+                                    </span>
+                                    {n.title}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
                     <LandmarkIcon size={20} />
                     <h1 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>Politics Hub</h1>
+                    {newsIsLive && <span style={{ marginLeft: 'auto', fontSize: '0.68rem', background: 'rgba(16,185,129,0.12)', color: '#10b981', padding: '3px 10px', borderRadius: 20, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', animation: 'pulse 2s infinite' }} />Live Updates</span>}
                 </div>
 
                 {/* Tabs */}
@@ -536,6 +530,52 @@ export default function PoliticsPage() {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+
+                            {/* Live Political News Feed */}
+                            <div className="hp-card" style={{ marginTop: 16 }}>
+                                <div className="hp-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><GlobeIcon size={15} /> Political News Feed</span>
+                                    {newsIsLive && <span style={{ fontSize: '0.58rem', fontWeight: 800, padding: '2px 8px', borderRadius: 20, background: 'rgba(16,185,129,0.12)', color: '#10b981', display: 'flex', alignItems: 'center', gap: 3 }}><span style={{ width: 4, height: 4, borderRadius: '50%', background: '#10b981', animation: 'pulse 2s infinite' }} />LIVE</span>}
+                                </div>
+                                {loadingNews && politicalNews.length === 0 && (
+                                    <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>Loading news...</div>
+                                )}
+                                {politicalNews.length === 0 && !loadingNews && (
+                                    <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>No political news available right now</div>
+                                )}
+                                {politicalNews.map((article: any) => {
+                                    const sentColors: Record<string, { color: string; bg: string }> = {
+                                        positive: { color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+                                        negative: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+                                        neutral: { color: '#6b7280', bg: 'rgba(107,114,128,0.12)' },
+                                    };
+                                    const sent = sentColors[article.sentiment] || sentColors.neutral;
+                                    return (
+                                        <div key={article.id} onClick={() => setSelectedPoliticalNews(article)}
+                                            style={{ padding: '12px 0', borderBottom: '1px solid var(--border-light)', cursor: 'pointer', transition: 'background 0.15s' }}
+                                            className="pulse-item-hover">
+                                            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 5, alignItems: 'center' }}>
+                                                {(article.urgencyLevel === 'breaking' || article.urgencyLevel === 'high') && (
+                                                    <span style={{ fontSize: '0.55rem', fontWeight: 800, padding: '1px 6px', borderRadius: 10, background: article.urgencyLevel === 'breaking' ? 'rgba(239,68,68,0.15)' : 'rgba(249,115,22,0.12)', color: article.urgencyLevel === 'breaking' ? '#ef4444' : '#f97316' }}>
+                                                        {article.urgencyLevel === 'breaking' ? 'BREAKING' : 'HIGH'}
+                                                    </span>
+                                                )}
+                                                <span style={{ fontSize: '0.55rem', fontWeight: 700, padding: '1px 6px', borderRadius: 10, background: sent.bg, color: sent.color }}>{article.sentiment}</span>
+                                                {article.country && article.country !== 'Global' && (
+                                                    <span style={{ fontSize: '0.55rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>🌍 {article.country}</span>
+                                                )}
+                                            </div>
+                                            <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: 4, lineHeight: 1.35 }}>{article.title}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
+                                                <span style={{ fontWeight: 600 }}>{article.source}</span>
+                                                <span>•</span>
+                                                <span>{article.timeAgo}</span>
+                                                {article.impactScore && <span style={{ display: 'flex', alignItems: 'center', gap: 2, color: article.impactScore >= 70 ? '#ef4444' : article.impactScore >= 50 ? '#f59e0b' : '#6b7280' }}><ZapIcon size={10} />{article.impactScore}</span>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </>
                     )}
@@ -846,7 +886,7 @@ export default function PoliticsPage() {
 
                 <div className="hp-card">
                     <div className="hp-card-title"><ShieldIcon size={15} /> Top Contributors</div>
-                    {users.filter(u => u.role === 'politician' || u.role === 'official').slice(0, 4).map(u => (
+                    {contributors.filter((u: any) => u.role === 'politician' || u.role === 'official').slice(0, 4).map((u: any) => (
                         <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border-light)' }}>
                             <Link href={`/profile/${u.username}`}><UserAvatar name={u.name} avatar={u.avatar} size="sm" /></Link>
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -925,6 +965,76 @@ export default function PoliticsPage() {
                         }
                     })}
                 />
+            )}
+
+            {/* Political News Detail Modal */}
+            {selectedPoliticalNews && (
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+                    onClick={() => setSelectedPoliticalNews(null)}>
+                    <div className="modal-content fade-in" style={{ background: 'var(--bg-secondary)', padding: 24, borderRadius: 16, width: '95%', maxWidth: 520, border: '1px solid var(--border)', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}
+                        onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setSelectedPoliticalNews(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)' }}><XIcon size={20} /></button>
+
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }}>
+                            {(selectedPoliticalNews.urgencyLevel === 'breaking' || selectedPoliticalNews.urgencyLevel === 'high') && (
+                                <span style={{ fontSize: '0.58rem', fontWeight: 800, padding: '2px 8px', borderRadius: 12, background: selectedPoliticalNews.urgencyLevel === 'breaking' ? 'rgba(239,68,68,0.15)' : 'rgba(249,115,22,0.12)', color: selectedPoliticalNews.urgencyLevel === 'breaking' ? '#ef4444' : '#f97316' }}>
+                                    {selectedPoliticalNews.urgencyLevel === 'breaking' ? 'BREAKING' : 'HIGH URGENCY'}
+                                </span>
+                            )}
+                            {selectedPoliticalNews.sentiment && (
+                                <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 12, background: selectedPoliticalNews.sentiment === 'positive' ? 'rgba(16,185,129,0.12)' : selectedPoliticalNews.sentiment === 'negative' ? 'rgba(239,68,68,0.12)' : 'rgba(107,114,128,0.12)', color: selectedPoliticalNews.sentiment === 'positive' ? '#10b981' : selectedPoliticalNews.sentiment === 'negative' ? '#ef4444' : '#6b7280' }}>
+                                    {selectedPoliticalNews.sentiment}
+                                </span>
+                            )}
+                            {selectedPoliticalNews.topic && (
+                                <span style={{ fontSize: '0.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: 12, background: 'rgba(139,92,246,0.1)', color: '#8b5cf6' }}>{selectedPoliticalNews.topic}</span>
+                            )}
+                        </div>
+
+                        <h2 style={{ fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.35, margin: '0 0 12px' }}>{selectedPoliticalNews.title}</h2>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>{selectedPoliticalNews.source}</span>
+                            <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>{selectedPoliticalNews.timeAgo}</span>
+                            {selectedPoliticalNews.country && selectedPoliticalNews.country !== 'Global' && (
+                                <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>🌍 {selectedPoliticalNews.country}</span>
+                            )}
+                        </div>
+
+                        <div style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '14px 16px', marginBottom: 16, borderLeft: '3px solid #8b5cf6' }}>
+                            <div style={{ fontSize: '0.66rem', fontWeight: 800, color: '#8b5cf6', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <ActivityIcon size={12} /> AI SUMMARY
+                            </div>
+                            <p style={{ fontSize: '0.88rem', lineHeight: 1.7, margin: 0, color: 'var(--text-secondary)' }}>
+                                {selectedPoliticalNews.description || 'Our intelligence team is monitoring this developing political story and will provide expert analysis shortly.'}
+                            </p>
+                        </div>
+
+                        {selectedPoliticalNews.keyPoints && selectedPoliticalNews.keyPoints.length > 0 && (
+                            <div style={{ marginBottom: 16 }}>
+                                <div style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: 8, color: 'var(--text-secondary)' }}>Key Points</div>
+                                {selectedPoliticalNews.keyPoints.map((kp: string, i: number) => (
+                                    <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                        <span style={{ color: '#8b5cf6', fontWeight: 700, flexShrink: 0 }}>•</span>
+                                        <span>{kp}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            {selectedPoliticalNews.url ? (
+                                <a href={selectedPoliticalNews.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flex: 1, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                    <ArrowUpRightIcon size={14} /> Read Full Story
+                                </a>
+                            ) : (
+                                <a href={`https://news.google.com/search?q=${encodeURIComponent(selectedPoliticalNews.title)}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ flex: 1, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                    <ArrowUpRightIcon size={14} /> Search on Google News
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
 
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

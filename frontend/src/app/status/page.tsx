@@ -1,85 +1,132 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import Link from 'next/link';
 import {
-    CheckCircleIcon, AlertTriangleIcon, AlertCircleIcon, ClockIcon,
-    ServerIcon, ShieldIcon, BellIcon, SearchIcon, ImageIcon,
-    DatabaseIcon, BotIcon, RefreshCwIcon, MailIcon, ActivityIcon
+    ActivityIcon, CheckCircleIcon, AlertCircleIcon, XCircleIcon,
+    ChevronDownIcon, ClockIcon, RefreshCwIcon, ZapIcon, GlobeIcon,
+    ServerIcon, DatabaseIcon, ShieldIcon, MailIcon, WifiIcon
 } from '@/components/ui/Icons';
 
 interface ServiceStatus {
-    id: string;
     name: string;
-    status: 'operational' | 'degraded' | 'outage' | 'maintenance';
-    icon: React.ReactNode;
+    status: 'operational' | 'degraded' | 'outage';
     uptime: number;
-    uptimeHistory: number[]; // 90 days
-}
-
-interface Incident {
-    id: string;
-    title: string;
-    status: 'investigating' | 'identified' | 'monitoring' | 'resolved';
-    severity: 'minor' | 'major' | 'critical';
-    createdAt: string;
-    updates: { time: string; text: string; status: string }[];
+    icon: React.ReactNode;
+    responseTime: string;
 }
 
 const services: ServiceStatus[] = [
-    { id: 'feed', name: 'Feed API', status: 'operational', icon: <ActivityIcon size={18} />, uptime: 99.98, uptimeHistory: Array.from({ length: 90 }, () => Math.random() > 0.03 ? 100 : Math.random() > 0.5 ? 95 : 0) },
-    { id: 'auth', name: 'Auth Service', status: 'operational', icon: <ShieldIcon size={18} />, uptime: 99.99, uptimeHistory: Array.from({ length: 90 }, () => Math.random() > 0.02 ? 100 : 95) },
-    { id: 'market', name: 'Market Data', status: 'degraded', icon: <ActivityIcon size={18} />, uptime: 99.85, uptimeHistory: Array.from({ length: 90 }, (_, i) => i > 85 ? (Math.random() > 0.4 ? 100 : 70) : Math.random() > 0.03 ? 100 : 90) },
-    { id: 'notif', name: 'Notifications', status: 'operational', icon: <BellIcon size={18} />, uptime: 99.97, uptimeHistory: Array.from({ length: 90 }, () => Math.random() > 0.04 ? 100 : 90) },
-    { id: 'ai', name: 'AI Analysis Engine', status: 'operational', icon: <BotIcon size={18} />, uptime: 99.92, uptimeHistory: Array.from({ length: 90 }, () => Math.random() > 0.05 ? 100 : Math.random() > 0.5 ? 85 : 60) },
-    { id: 'search', name: 'Search', status: 'operational', icon: <SearchIcon size={18} />, uptime: 99.96, uptimeHistory: Array.from({ length: 90 }, () => Math.random() > 0.03 ? 100 : 92) },
-    { id: 'media', name: 'Media Upload', status: 'operational', icon: <ImageIcon size={18} />, uptime: 99.94, uptimeHistory: Array.from({ length: 90 }, () => Math.random() > 0.04 ? 100 : 88) },
-    { id: 'db', name: 'Database Cluster', status: 'operational', icon: <DatabaseIcon size={18} />, uptime: 99.999, uptimeHistory: Array.from({ length: 90 }, () => 100) },
+    { name: 'Core Platform', status: 'operational', uptime: 99.99, icon: <GlobeIcon size={18} />, responseTime: '42ms' },
+    { name: 'Politics Data Feed', status: 'operational', uptime: 99.97, icon: <DatabaseIcon size={18} />, responseTime: '85ms' },
+    { name: 'Market Data API', status: 'operational', uptime: 99.95, icon: <ActivityIcon size={18} />, responseTime: '23ms' },
+    { name: 'AI Sentiment Engine', status: 'operational', uptime: 99.92, icon: <ZapIcon size={18} />, responseTime: '156ms' },
+    { name: 'WebSocket Streaming', status: 'operational', uptime: 99.98, icon: <WifiIcon size={18} />, responseTime: '8ms' },
+    { name: 'Authentication (SSO)', status: 'operational', uptime: 99.99, icon: <ShieldIcon size={18} />, responseTime: '67ms' },
+    { name: 'Notification Service', status: 'operational', uptime: 99.96, icon: <MailIcon size={18} />, responseTime: '34ms' },
+    { name: 'CDN & Static Assets', status: 'operational', uptime: 100, icon: <ServerIcon size={18} />, responseTime: '12ms' },
 ];
 
-const incidents: Incident[] = [
+const uptimeSummary = [
+    { label: '30 Days', value: '99.97%', color: '#10b981' },
+    { label: '90 Days', value: '99.95%', color: '#10b981' },
+    { label: 'This Year', value: '99.93%', color: '#10b981' },
+];
+
+const performanceMetrics = [
+    { label: 'Avg API Response', value: '54ms', desc: 'p50 latency', color: '#10b981' },
+    { label: 'P99 Latency', value: '212ms', desc: 'Worst case', color: '#f59e0b' },
+    { label: 'WebSocket Conns', value: '24.8K', desc: 'Active now', color: '#3b82f6' },
+];
+
+const maintenanceWindows = [
     {
-        id: 'INC-247', title: 'Elevated latency on Market Data endpoints', status: 'monitoring',
-        severity: 'minor', createdAt: 'Mar 18, 2026 08:12 UTC',
+        id: 'm1',
+        title: 'Database Migration — Read Replica Upgrade',
+        date: 'March 30, 2026',
+        time: '2:00 AM – 3:30 AM ET',
+        impact: 'Brief read latency increase (<500ms) for Politics and Market data APIs.',
+        status: 'scheduled' as const,
+    },
+    {
+        id: 'm2',
+        title: 'CDN Edge Node Expansion — EU Region',
+        date: 'April 5, 2026',
+        time: '4:00 AM – 5:00 AM ET',
+        impact: 'No user-facing impact. EU latency will improve post-maintenance.',
+        status: 'scheduled' as const,
+    },
+];
+
+interface IncidentEvent {
+    id: string;
+    title: string;
+    date: string;
+    severity: 'minor' | 'major' | 'resolved';
+    description: string;
+    updates: { time: string; text: string }[];
+}
+
+const incidents: IncidentEvent[] = [
+    {
+        id: 'i1', title: 'AI Sentiment Engine Degraded Performance', date: 'March 24, 2026', severity: 'resolved',
+        description: 'Some users experienced slow sentiment analysis responses due to a GPU cluster issue.',
         updates: [
-            { time: '08:45 UTC', text: 'We have identified the issue with our market data provider and applied a workaround. Monitoring for stability.', status: 'Monitoring' },
-            { time: '08:22 UTC', text: 'Our engineering team has identified elevated latency on the Finnhub WebSocket connection affecting real-time market data.', status: 'Identified' },
-            { time: '08:12 UTC', text: 'We are investigating reports of delayed market data updates across the Business and Explore pages.', status: 'Investigating' },
+            { time: '10:15 AM ET', text: 'Investigating reports of slow AI responses.' },
+            { time: '10:45 AM ET', text: 'Identified GPU cluster memory saturation. Scaling additional capacity.' },
+            { time: '11:20 AM ET', text: 'New GPU instances online. Observing recovery.' },
+            { time: '11:45 AM ET', text: 'Resolved. All AI services operating normally. Root cause: memory leak in model v2.4.1, patched.' },
         ]
     },
     {
-        id: 'INC-245', title: 'AI Analysis Engine intermittent timeouts', status: 'resolved',
-        severity: 'major', createdAt: 'Mar 16, 2026 14:30 UTC',
+        id: 'i2', title: 'WebSocket Connection Drops — East US Region', date: 'March 18, 2026', severity: 'resolved',
+        description: 'Users in the East US region experienced intermittent WebSocket disconnections.',
         updates: [
-            { time: '16:15 UTC', text: 'The issue has been fully resolved. AI analysis is processing normally with expected latency. Root cause: GPU memory leak in the sentiment analysis model pipeline.', status: 'Resolved' },
-            { time: '15:20 UTC', text: 'We have restarted the affected GPU cluster nodes and are monitoring performance.', status: 'Monitoring' },
-            { time: '14:30 UTC', text: 'AI-powered features including sentiment analysis and policy impact scoring are experiencing intermittent failures.', status: 'Investigating' },
+            { time: '3:30 PM ET', text: 'Investigating WebSocket disconnections reported by East US users.' },
+            { time: '4:00 PM ET', text: 'Root cause identified: ISP backbone issue affecting our Virginia datacenter.' },
+            { time: '4:45 PM ET', text: 'Traffic rerouted through Ohio datacenter. Services restored.' },
+            { time: '5:15 PM ET', text: 'Fully resolved. All WebSocket connections stable. Adding redundant ISP link.' },
+        ]
+    },
+    {
+        id: 'i3', title: 'Market Data API Delayed — Opening Bell Surge', date: 'March 10, 2026', severity: 'resolved',
+        description: 'Market data API experienced 2-3 second delays during market open due to record traffic.',
+        updates: [
+            { time: '9:30 AM ET', text: 'Elevated latency detected on market data endpoints.' },
+            { time: '9:55 AM ET', text: 'Auto-scaling triggered. Additional API instances provisioning.' },
+            { time: '10:15 AM ET', text: 'New instances online. Latency returning to normal.' },
+            { time: '10:30 AM ET', text: 'Resolved. Adjusting pre-market scaling thresholds to prevent recurrence.' },
         ]
     },
 ];
 
-const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string; icon: React.ReactNode }> = {
-    operational: { color: '#10b981', bg: 'rgba(16,185,129,0.15)', label: 'Operational', icon: <CheckCircleIcon size={16} /> },
-    degraded: { color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', label: 'Degraded', icon: <AlertTriangleIcon size={16} /> },
-    outage: { color: '#ef4444', bg: 'rgba(239,68,68,0.15)', label: 'Major Outage', icon: <AlertCircleIcon size={16} /> },
-    maintenance: { color: '#3b82f6', bg: 'rgba(59,130,246,0.15)', label: 'Maintenance', icon: <ClockIcon size={16} /> },
+const statusConfig = {
+    operational: { label: 'Operational', color: '#10b981', icon: <CheckCircleIcon size={16} /> },
+    degraded: { label: 'Degraded', color: '#f59e0b', icon: <AlertCircleIcon size={16} /> },
+    outage: { label: 'Outage', color: '#ef4444', icon: <XCircleIcon size={16} /> },
 };
 
-const INCIDENT_COLORS: Record<string, string> = {
-    investigating: '#ef4444', identified: '#f59e0b', monitoring: '#3b82f6', resolved: '#10b981'
-};
+// Generate last 30 days uptime bars
+const last30Days = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (29 - i));
+    return {
+        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        uptime: i === 10 ? 99.2 : i === 18 ? 99.5 : 99.9 + Math.random() * 0.1,
+    };
+});
 
 export default function StatusPage() {
-    const [subscribeEmail, setSubscribeEmail] = useState('');
-    const [subscribeType, setSubscribeType] = useState<'email' | 'sms'>('email');
-    const [lastRefresh, setLastRefresh] = useState(new Date());
-    const [subscribed, setSubscribed] = useState(false);
+    const [openIncidents, setOpenIncidents] = useState<Set<string>>(new Set());
 
-    useEffect(() => {
-        const interval = setInterval(() => setLastRefresh(new Date()), 30000);
-        return () => clearInterval(interval);
-    }, []);
+    const toggleIncident = (id: string) => {
+        setOpenIncidents(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
 
     const allOperational = services.every(s => s.status === 'operational');
-    const overallStatus = allOperational ? STATUS_CONFIG.operational : STATUS_CONFIG.degraded;
 
     return (
         <div style={{ minHeight: '100vh' }}>
@@ -87,121 +134,178 @@ export default function StatusPage() {
             <div className="info-hero" style={{ paddingBottom: 30 }}>
                 <div className="info-hero-glow" />
                 <div style={{ position: 'relative', zIndex: 1, maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderRadius: 20, background: overallStatus.bg, border: `1px solid ${overallStatus.color}40`, marginBottom: 20, fontSize: '0.8rem', color: overallStatus.color }}>
-                        <ServerIcon size={14} /> System Status
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderRadius: 20, background: allOperational ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', border: `1px solid ${allOperational ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}`, marginBottom: 20, fontSize: '0.8rem', color: allOperational ? '#34d399' : '#fbbf24' }}>
+                        <ActivityIcon size={14} /> {allOperational ? 'All Systems Operational' : 'Service Disruption'}
                     </div>
-                    <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 800, marginBottom: 10 }}>
-                        {allOperational ? 'All Systems Operational' : 'Partial System Degradation'}
-                    </h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                        <RefreshCwIcon size={13} /> Auto-refreshes every 30s · Last check: {lastRefresh.toLocaleTimeString()}
+                    <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 800, marginBottom: 10 }}>System Status</h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', marginBottom: 6 }}>
+                        Real-time health monitoring for all Arizonalex services.
+                    </p>
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem' }}>
+                        <ClockIcon size={12} /> Last updated: {new Date().toLocaleTimeString('en-US')} • Auto-refreshes every 60s
                     </p>
                 </div>
             </div>
 
-            <div className="info-page-content" style={{ maxWidth: 860, margin: '0 auto' }}>
-                {/* Services List */}
-                <h2 className="info-section-title">Service Status</h2>
-                <div className="info-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="info-page-content">
+                {/* Uptime Summary Cards */}
+                <div className="info-grid-3" style={{ marginBottom: 32 }}>
+                    {uptimeSummary.map((u, i) => (
+                        <div key={i} className="info-card" style={{ textAlign: 'center', padding: '24px 16px' }}>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', marginBottom: 6, fontWeight: 600 }}>{u.label}</div>
+                            <div style={{ fontSize: '2rem', fontWeight: 800, color: u.color, lineHeight: 1 }}>{u.value}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 4 }}>Uptime</div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Performance Metrics */}
+                <div className="info-grid-3" style={{ marginBottom: 32 }}>
+                    {performanceMetrics.map((m, i) => (
+                        <div key={i} className="info-card" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 20px' }}>
+                            <div style={{ width: 44, height: 44, borderRadius: 12, background: `${m.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: m.color }}>
+                                <ZapIcon size={20} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: m.color }}>{m.value}</div>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{m.label}</div>
+                                <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>{m.desc}</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Service List */}
+                <h2 className="info-section-title">Current Service Status</h2>
+                <div className="info-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 32 }}>
                     {services.map((service, i) => {
-                        const cfg = STATUS_CONFIG[service.status];
+                        const cfg = statusConfig[service.status];
                         return (
-                            <div key={service.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderBottom: i < services.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                                <span style={{ color: 'var(--text-tertiary)' }}>{service.icon}</span>
-                                <span style={{ flex: 1, fontWeight: 600, fontSize: '0.9rem' }}>{service.name}</span>
-
-                                {/* Uptime mini-chart */}
-                                <div style={{ display: 'flex', gap: 1, alignItems: 'flex-end', height: 20 }} title={`${service.uptime}% uptime (90 days)`}>
-                                    {service.uptimeHistory.slice(-45).map((v, j) => (
-                                        <div key={j} style={{ width: 3, height: 20, borderRadius: 1, background: v >= 99 ? '#10b981' : v >= 80 ? '#f59e0b' : '#ef4444', opacity: 0.8 }} />
-                                    ))}
+                            <div key={i} style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12,
+                                padding: '16px 20px', borderBottom: i < services.length - 1 ? '1px solid var(--border-light)' : 'none'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 200px', minWidth: 0 }}>
+                                    <div style={{ color: 'var(--text-tertiary)' }}>{service.icon}</div>
+                                    <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{service.name}</span>
                                 </div>
-
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', minWidth: 55, textAlign: 'right' }}>{service.uptime}%</span>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', fontWeight: 600, color: cfg.color, padding: '3px 10px', borderRadius: 8, background: cfg.bg, minWidth: 100, justifyContent: 'center' }}>
-                                    {cfg.icon} {cfg.label}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{service.responseTime}</span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{service.uptime}%</span>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', fontWeight: 600, color: cfg.color }}>
+                                        {cfg.icon} {cfg.label}
+                                    </span>
+                                </div>
                             </div>
                         );
                     })}
                 </div>
 
-                {/* Active Incidents */}
-                <h2 className="info-section-title" style={{ marginTop: 40 }}>Active & Recent Incidents</h2>
-                {incidents.map(inc => (
-                    <div key={inc.id} className="info-card" style={{ marginBottom: 16, padding: 22 }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-                            <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                    <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: `${INCIDENT_COLORS[inc.status]}20`, color: INCIDENT_COLORS[inc.status], textTransform: 'uppercase' }}>
-                                        {inc.status}
-                                    </span>
-                                    <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 6, background: 'var(--bg-tertiary)', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>
-                                        {inc.severity}
-                                    </span>
+                {/* 30-Day Uptime Chart */}
+                <h2 className="info-section-title">30-Day Uptime History</h2>
+                <div className="info-card" style={{ padding: '20px', marginBottom: 32, overflowX: 'auto' }}>
+                    <div style={{ display: 'flex', gap: 3, minWidth: 600, height: 50, alignItems: 'flex-end' }}>
+                        {last30Days.map((day, i) => {
+                            const height = ((day.uptime - 99) / 1) * 100;
+                            const color = day.uptime >= 99.9 ? '#10b981' : day.uptime >= 99.5 ? '#f59e0b' : '#ef4444';
+                            return (
+                                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' }} title={`${day.date}: ${day.uptime.toFixed(2)}%`}>
+                                    <div style={{ width: '100%', height: Math.max(height * 0.5, 4), borderRadius: 3, background: color, transition: 'height 0.3s' }} />
                                 </div>
-                                <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>{inc.title}</h3>
-                            </div>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{inc.id} · {inc.createdAt}</span>
-                        </div>
-
-                        {/* Timeline */}
-                        <div style={{ borderLeft: '2px solid var(--border)', marginLeft: 8, paddingLeft: 20 }}>
-                            {inc.updates.map((u, i) => (
-                                <div key={i} style={{ position: 'relative', paddingBottom: i < inc.updates.length - 1 ? 16 : 0 }}>
-                                    <div style={{ position: 'absolute', left: -26, top: 4, width: 10, height: 10, borderRadius: '50%', background: i === 0 ? INCIDENT_COLORS[inc.status] : 'var(--bg-tertiary)', border: '2px solid var(--border)' }} />
-                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginBottom: 2 }}>
-                                        <strong>{u.status}</strong> — {u.time}
-                                    </div>
-                                    <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{u.text}</p>
-                                </div>
-                            ))}
-                        </div>
+                            );
+                        })}
                     </div>
-                ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-tertiary)', marginTop: 8 }}>
+                        <span>{last30Days[0].date}</span>
+                        <span>{last30Days[14].date}</span>
+                        <span>Today</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, marginTop: 12, fontSize: '0.72rem', color: 'var(--text-tertiary)', justifyContent: 'center' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#10b981' }} /> 99.9%+</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#f59e0b' }} /> 99.5-99.9%</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, borderRadius: 2, background: '#ef4444' }} /> &lt;99.5%</span>
+                    </div>
+                </div>
 
-                {/* Subscribe */}
-                <div className="info-card" style={{ padding: 28, marginTop: 32, textAlign: 'center' }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 6 }}>Subscribe to Updates</h3>
-                    <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
-                        Get notified about service disruptions and maintenance windows.
-                    </p>
-
-                    {subscribed ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#10b981', fontSize: '0.9rem', fontWeight: 600 }}>
-                            <CheckCircleIcon size={18} /> Subscribed! You&apos;ll receive status updates.
+                {/* Scheduled Maintenance */}
+                <h2 className="info-section-title">Scheduled Maintenance</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+                    {maintenanceWindows.map(m => (
+                        <div key={m.id} className="info-card" style={{ padding: 22, borderLeft: '3px solid #3b82f6' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                                <h3 style={{ fontSize: '0.92rem', fontWeight: 700 }}>{m.title}</h3>
+                                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#3b82f6', background: 'rgba(59,130,246,0.12)', padding: '3px 10px', borderRadius: 6 }}>SCHEDULED</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 16, fontSize: '0.78rem', color: 'var(--text-secondary)', flexWrap: 'wrap', marginBottom: 8 }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ClockIcon size={12} /> {m.date}</span>
+                                <span>{m.time}</span>
+                            </div>
+                            <p style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)', margin: 0 }}><strong>Impact:</strong> {m.impact}</p>
                         </div>
-                    ) : (
-                        <>
-                            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 14 }}>
-                                <button
-                                    className={`info-priority-btn ${subscribeType === 'email' ? 'active' : ''}`}
-                                    onClick={() => setSubscribeType('email')}
-                                    data-priority="medium"
-                                >
-                                    <MailIcon size={14} /> Email
-                                </button>
-                                <button
-                                    className={`info-priority-btn ${subscribeType === 'sms' ? 'active' : ''}`}
-                                    onClick={() => setSubscribeType('sms')}
-                                    data-priority="medium"
-                                >
-                                    <BellIcon size={14} /> SMS
-                                </button>
-                            </div>
-                            <div style={{ display: 'flex', gap: 10, maxWidth: 400, margin: '0 auto' }}>
-                                <input
-                                    className="info-form-input"
-                                    type={subscribeType === 'email' ? 'email' : 'tel'}
-                                    placeholder={subscribeType === 'email' ? 'your@email.com' : '+1 (555) 123-4567'}
-                                    value={subscribeEmail}
-                                    onChange={e => setSubscribeEmail(e.target.value)}
-                                />
-                                <button className="btn btn-primary" onClick={() => { if (subscribeEmail.trim()) setSubscribed(true); }}>Subscribe</button>
-                            </div>
-                        </>
+                    ))}
+                    {maintenanceWindows.length === 0 && (
+                        <div className="info-card" style={{ textAlign: 'center', padding: 30, color: 'var(--text-tertiary)', fontSize: '0.85rem' }}>
+                            No maintenance windows scheduled
+                        </div>
                     )}
                 </div>
+
+                {/* Past Incidents */}
+                <h2 className="info-section-title">Incident History</h2>
+                <div style={{ maxWidth: 800, margin: '0 auto' }}>
+                    {incidents.map((incident, i) => (
+                        <div key={incident.id} className="info-accordion" style={{ animationDelay: `${i * 60}ms` }}>
+                            <button className={`info-accordion-header ${openIncidents.has(incident.id) ? 'open' : ''}`} onClick={() => toggleIncident(incident.id)}>
+                                <div style={{ flex: 1, textAlign: 'left' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                                        <span style={{
+                                            fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+                                            background: incident.severity === 'resolved' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+                                            color: incident.severity === 'resolved' ? '#10b981' : '#f59e0b'
+                                        }}>
+                                            {incident.severity.toUpperCase()}
+                                        </span>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{incident.date}</span>
+                                    </div>
+                                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{incident.title}</span>
+                                </div>
+                                <span className={`info-accordion-chevron ${openIncidents.has(incident.id) ? 'open' : ''}`}>
+                                    <ChevronDownIcon size={18} />
+                                </span>
+                            </button>
+                            <div className={`info-accordion-body ${openIncidents.has(incident.id) ? 'open' : ''}`}>
+                                <div className="info-accordion-content">
+                                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 14 }}>{incident.description}</p>
+                                    <div style={{ borderLeft: '2px solid var(--border)', paddingLeft: 16 }}>
+                                        {incident.updates.map((u, j) => (
+                                            <div key={j} style={{ marginBottom: 10, fontSize: '0.82rem' }}>
+                                                <span style={{ fontWeight: 700, color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>{u.time}</span>
+                                                <p style={{ margin: '2px 0 0', color: 'var(--text-secondary)' }}>{u.text}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Subscribe CTA */}
+                <div className="info-cta-section" style={{ marginTop: 48 }}>
+                    <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 8 }}>Stay Informed</h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 20, maxWidth: 420 }}>
+                        Get notified about service incidents, maintenance, and status updates.
+                    </p>
+                    <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <MailIcon size={16} /> Subscribe to Updates
+                        </button>
+                        <Link href="/help/article/ti-3" className="btn btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <ZapIcon size={16} /> WebSocket Guide
+                        </Link>
+                    </div>
+                </div>
+
             </div>
         </div>
     );

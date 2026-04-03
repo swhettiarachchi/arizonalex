@@ -24,13 +24,41 @@ export interface UserProfile {
     followers?: number;
     following?: number;
     joined?: string;
+    twoFactorEnabled?: boolean;
+    // Political fields
+    position?: string;
+    ideology?: string;
+    yearsActive?: string;
+    country?: string;
+    campaignPromises?: string[];
+    achievements?: string[];
+    // Business fields
+    company?: string;
+    industry?: string;
+    services?: string[];
+    portfolioUrl?: string;
+    // Face verification fields
+    faceVerified?: boolean;
+    verificationScore?: number;
+    verificationDate?: string;
+    identityLevel?: 'normal' | 'verified_citizen' | 'verified_politician' | 'official_government';
+    faceioId?: string;
+    trustScore?: number;
+}
+
+interface LoginResult {
+    success: boolean;
+    error?: string;
+    requires2FA?: boolean;
+    tempToken?: string;
+    devOtp?: string;
 }
 
 interface AuthContextType {
     isLoggedIn: boolean;
     user: UserProfile | null;
     loading: boolean;
-    login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    login: (email: string, password: string) => Promise<LoginResult>;
     logout: () => Promise<void>;
     updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
@@ -45,29 +73,32 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [isLoggedIn, setIsLoggedIn] = useState(true);
-    const [user, setUser] = useState<UserProfile | null>({
-        id: 'demo-user-123',
-        name: 'Demo User',
-        username: 'demouser',
-        bio: 'This is a demo account for ArizonaLex.',
-        location: 'Phoenix, AZ',
-        website: 'https://arizonalex.com',
-        role: 'citizen',
-        verified: true,
-        followers: 1250,
-        following: 450,
-        joined: 'March 2026',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
-    });
-    const [loading, setLoading] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [user, setUser] = useState<UserProfile | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    // Initial session check disabled for demo
+    // Check for existing session on mount
     useEffect(() => {
-        setLoading(false);
+        const checkSession = async () => {
+            try {
+                const res = await fetch('/api/auth/me');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.user) {
+                        setUser(data.user);
+                        setIsLoggedIn(true);
+                    }
+                }
+            } catch {
+                // No active session
+            } finally {
+                setLoading(false);
+            }
+        };
+        checkSession();
     }, []);
 
-    const login = async (email: string, password: string) => {
+    const login = async (email: string, password: string): Promise<LoginResult> => {
         try {
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
@@ -75,6 +106,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify({ email, password }),
             });
             const data = await res.json();
+
+            // 2FA required — return temp token for the login page to handle
+            if (data.success && data.requires2FA) {
+                return {
+                    success: true,
+                    requires2FA: true,
+                    tempToken: data.tempToken,
+                    devOtp: data.devOtp,
+                };
+            }
+
             if (data.success && data.user) {
                 setUser(data.user);
                 setIsLoggedIn(true);

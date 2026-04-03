@@ -1,79 +1,82 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import Link from 'next/link';
 import {
-    FlagIcon, AlertCircleIcon, AlertTriangleIcon, ShieldIcon, SettingsIcon,
-    ZapIcon, HelpCircleIcon, ChevronRightIcon, CheckCircleIcon, UploadIcon,
-    ClockIcon, XIcon, ImageIcon
+    FlagIcon, AlertCircleIcon, CheckCircleIcon, ChevronDownIcon,
+    UserIcon, MessageSquareIcon, ImageIcon, LinkIcon, ShieldIcon,
+    FileTextIcon, SendIcon, EyeIcon, BotIcon, ZapIcon, LockIcon
 } from '@/components/ui/Icons';
 
-interface RecentReport {
-    id: string;
-    title: string;
-    status: 'open' | 'in-review' | 'resolved';
-    date: string;
-    type: string;
-}
-
-const problemTypes = [
-    { id: 'bug', label: 'Bug Report', desc: 'Something isn\'t working correctly', icon: <AlertCircleIcon size={28} />, color: '#ef4444' },
-    { id: 'misinfo', label: 'Misinformation', desc: 'False or misleading political/financial content', icon: <AlertTriangleIcon size={28} />, color: '#f59e0b' },
-    { id: 'harassment', label: 'Harassment', desc: 'Abusive, threatening, or targeted behavior', icon: <ShieldIcon size={28} />, color: '#8b5cf6' },
-    { id: 'account', label: 'Account Issue', desc: 'Login, security, or profile problems', icon: <SettingsIcon size={28} />, color: '#3b82f6' },
-    { id: 'feature', label: 'Feature Request', desc: 'Suggest a new feature or improvement', icon: <ZapIcon size={28} />, color: '#10b981' },
-    { id: 'other', label: 'Other', desc: 'Anything else we should know about', icon: <HelpCircleIcon size={28} />, color: '#94a3b8' },
+const reportTypes = [
+    { id: 'harassment', icon: <AlertCircleIcon size={22} />, label: 'Harassment or Abuse', desc: 'Threats, bullying, or targeted hate speech', color: '#ef4444' },
+    { id: 'misinfo', icon: <ShieldIcon size={22} />, label: 'Misinformation', desc: 'False claims, deepfakes, or misleading data', color: '#f59e0b' },
+    { id: 'impersonation', icon: <UserIcon size={22} />, label: 'Impersonation', desc: 'Fake accounts pretending to be someone else', color: '#8b5cf6' },
+    { id: 'spam', icon: <MessageSquareIcon size={22} />, label: 'Spam or Manipulation', desc: 'Bot activity, astroturfing, or spam', color: '#3b82f6' },
+    { id: 'content', icon: <ImageIcon size={22} />, label: 'Inappropriate Content', desc: 'NSFW material or violent content', color: '#ec4899' },
+    { id: 'technical', icon: <ZapIcon size={22} />, label: 'Technical Bug', desc: 'Platform issues, broken features, or errors', color: '#06b6d4' },
 ];
 
-const recentReports: RecentReport[] = [
-    { id: 'RPT-2847', title: 'Market data delayed on S&P 500 widget', status: 'in-review', date: 'Mar 15, 2026', type: 'Bug' },
-    { id: 'RPT-2831', title: 'False campaign finance figures on post', status: 'resolved', date: 'Mar 12, 2026', type: 'Misinformation' },
-    { id: 'RPT-2819', title: 'Cannot export legislative tracking data', status: 'open', date: 'Mar 10, 2026', type: 'Bug' },
-];
-
-const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-    'open': { bg: 'rgba(59,130,246,0.15)', text: '#3b82f6', label: 'Open' },
-    'in-review': { bg: 'rgba(245,158,11,0.15)', text: '#f59e0b', label: 'In Review' },
-    'resolved': { bg: 'rgba(16,185,129,0.15)', text: '#10b981', label: 'Resolved' },
+const templates: Record<string, string> = {
+    harassment: 'I would like to report harassment/abuse from a user. The behavior includes:\n\nUser involved: @\nSpecific behavior observed:\nDate/time of incident:\nScreenshot URLs (if any):',
+    misinfo: 'I would like to report misleading or false information.\n\nPost/content URL:\nWhat is inaccurate:\nCorrect information source:\nPotential impact level:',
+    impersonation: 'I would like to report an account that is impersonating someone.\n\nImpersonating account: @\nReal person/org being impersonated:\nProof of real identity:\nHow this was discovered:',
+    spam: 'I would like to report spam or platform manipulation.\n\nSuspicious account(s): @\nType of spam:\nFrequency observed:\nAdditional context:',
+    content: 'I would like to report inappropriate content.\n\nContent URL:\nType of violation:\nAdditional context:',
+    technical: 'I would like to report a technical issue.\n\nFeature affected:\nExpected behavior:\nActual behavior:\nBrowser/device info:\nSteps to reproduce:',
 };
 
+const safetyTips = [
+    'Block the user immediately if you feel unsafe',
+    'Take screenshots before content is removed',
+    'Don\'t engage with harassers — report and disengage',
+    'Use our "mute" feature to stop notifications from them',
+    'Reports are confidential — the user won\'t know who reported',
+];
+
 export default function ReportPage() {
-    const [step, setStep] = useState(1);
+    const [step, setStep] = useState<1 | 2 | 3>(1);
     const [selectedType, setSelectedType] = useState('');
+    const [isAnonymous, setIsAnonymous] = useState(false);
     const [description, setDescription] = useState('');
-    const [url, setUrl] = useState('');
-    const [priority, setPriority] = useState('medium');
-    const [fileName, setFileName] = useState('');
-    const [submitted, setSubmitted] = useState(false);
-    const [ticketNumber] = useState('RPT-' + Math.floor(2850 + Math.random() * 100));
+    const [evidenceUrl, setEvidenceUrl] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [success, setSuccess] = useState(false);
 
-    // Auto-save draft
-    useEffect(() => {
-        const draft = { selectedType, description, url, priority };
-        localStorage.setItem('arizonalex_report_draft', JSON.stringify(draft));
-    }, [selectedType, description, url, priority]);
-
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem('arizonalex_report_draft');
-            if (saved) {
-                const draft = JSON.parse(saved);
-                if (draft.selectedType) setSelectedType(draft.selectedType);
-                if (draft.description) setDescription(draft.description);
-                if (draft.url) setUrl(draft.url);
-                if (draft.priority) setPriority(draft.priority);
-            }
-        } catch {}
-    }, []);
-
-    const handleSubmit = () => {
-        setSubmitted(true);
-        setStep(3);
-        localStorage.removeItem('arizonalex_report_draft');
+    const handleTypeSelect = (id: string) => {
+        setSelectedType(id);
+        setDescription(templates[id] || '');
+        setStep(2);
     };
 
-    const errors: Record<string, string> = {};
-    if (step === 2) {
-        if (!description.trim()) errors.description = 'Please describe the issue';
-        if (description.trim().length > 0 && description.trim().length < 20) errors.description = 'Please provide at least 20 characters';
+    const handleSubmit = () => {
+        setSubmitting(true);
+        setTimeout(() => {
+            setSubmitting(false);
+            setSuccess(true);
+        }, 1800);
+    };
+
+    if (success) {
+        return (
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+                <div className="info-card" style={{ textAlign: 'center', padding: '48px 32px', maxWidth: 480 }}>
+                    <div className="info-success-icon">
+                        <CheckCircleIcon size={44} />
+                    </div>
+                    <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginTop: 20, marginBottom: 8 }}>Report Submitted</h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 6 }}>
+                        Your report has been received and assigned to our Trust & Safety team.
+                    </p>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)', marginBottom: 24 }}>
+                        Reference: RPT-{Date.now().toString().slice(-6)} • Review within 24 hours
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button className="btn btn-primary" onClick={() => { setSuccess(false); setStep(1); setSelectedType(''); setDescription(''); }}>Submit Another</button>
+                        <Link href="/" className="btn btn-outline">Return to Feed</Link>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -83,208 +86,166 @@ export default function ReportPage() {
                 <div className="info-hero-glow" />
                 <div style={{ position: 'relative', zIndex: 1, maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', borderRadius: 20, background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', marginBottom: 20, fontSize: '0.8rem', color: '#f87171' }}>
-                        <FlagIcon size={14} /> Report a Problem
+                        <FlagIcon size={14} /> Report
                     </div>
-                    <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 800, marginBottom: 10 }}>
-                        Report a Problem
-                    </h1>
+                    <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 800, marginBottom: 10 }}>Report a Problem</h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
-                        Help us improve Arizonalex by reporting bugs, misinformation, or policy violations.
+                        Help keep Arizonalex safe. All reports are reviewed by our Trust & Safety team within 24 hours.
                     </p>
                 </div>
             </div>
 
-            <div className="info-page-content" style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-                {/* Main Form */}
-                <div style={{ flex: '1 1 600px', minWidth: 0 }}>
-                    {/* Progress indicator */}
-                    <div className="info-progress-bar">
-                        {[1, 2, 3].map(s => (
-                            <div key={s} className={`info-progress-step ${step >= s ? 'active' : ''} ${step > s ? 'completed' : ''}`}>
-                                <div className="info-progress-circle">
-                                    {step > s ? <CheckCircleIcon size={18} /> : s}
+            <div className="info-page-content">
+                <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
+                    {/* Main Content */}
+                    <div style={{ flex: '1 1 560px', minWidth: 0 }}>
+                        {/* Stepper */}
+                        <div style={{ display: 'flex', gap: 0, marginBottom: 28 }}>
+                            {[{ n: 1, l: 'Type' }, { n: 2, l: 'Details' }, { n: 3, l: 'Review' }].map((s, i) => (
+                                <div key={s.n} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                                    {i > 0 && <div style={{ position: 'absolute', top: 14, left: -40, width: 80, height: 2, background: step >= s.n ? 'var(--primary)' : 'var(--border)', transition: 'background 0.3s', zIndex: 0 }} />}
+                                    <div style={{
+                                        width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        background: step >= s.n ? 'var(--primary)' : 'var(--bg-tertiary)', color: step >= s.n ? '#fff' : 'var(--text-tertiary)',
+                                        fontSize: '0.75rem', fontWeight: 800, zIndex: 1, border: `2px solid ${step >= s.n ? 'var(--primary)' : 'var(--border)'}`, transition: 'all 0.3s'
+                                    }}>
+                                        {step > s.n ? <CheckCircleIcon size={14} /> : s.n}
+                                    </div>
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, marginTop: 6, color: step >= s.n ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>{s.l}</span>
                                 </div>
-                                <span className="info-progress-label">
-                                    {s === 1 ? 'Problem Type' : s === 2 ? 'Details' : 'Confirmation'}
-                                </span>
-                            </div>
-                        ))}
-                        <div className="info-progress-line">
-                            <div className="info-progress-fill" style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }} />
+                            ))}
                         </div>
-                    </div>
 
-                    {/* Step 1: Problem Type */}
-                    {step === 1 && (
-                        <div>
-                            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: 6 }}>What type of problem?</h2>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 20 }}>Select the category that best describes your issue.</p>
-                            <div className="info-grid-2">
-                                {problemTypes.map(type => (
-                                    <button
-                                        key={type.id}
-                                        className={`info-card info-card-hover info-selectable ${selectedType === type.id ? 'selected' : ''}`}
-                                        onClick={() => setSelectedType(type.id)}
-                                        style={{ textAlign: 'left', cursor: 'pointer', border: selectedType === type.id ? `2px solid ${type.color}` : undefined }}
-                                    >
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                                            <div style={{ width: 52, height: 52, borderRadius: 12, background: `${type.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: type.color, flexShrink: 0 }}>
+                        {/* Step 1: Select Type */}
+                        {step === 1 && (
+                            <div>
+                                <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 16 }}>What are you reporting?</h2>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(250px, 100%), 1fr))', gap: 12 }}>
+                                    {reportTypes.map(type => (
+                                        <button key={type.id} className="info-card info-card-hover" onClick={() => handleTypeSelect(type.id)}
+                                            style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', textAlign: 'left', border: selectedType === type.id ? `2px solid ${type.color}` : undefined, background: selectedType === type.id ? `${type.color}08` : undefined }}>
+                                            <div style={{ width: 44, height: 44, borderRadius: 12, background: `${type.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: type.color, flexShrink: 0 }}>
                                                 {type.icon}
                                             </div>
                                             <div>
-                                                <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 4 }}>{type.label}</div>
-                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{type.desc}</div>
+                                                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>{type.label}</div>
+                                                <div style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', marginTop: 2 }}>{type.desc}</div>
                                             </div>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
-                                <button
-                                    className="btn btn-primary"
-                                    disabled={!selectedType}
-                                    onClick={() => setStep(2)}
-                                    style={{ opacity: selectedType ? 1 : 0.5 }}
-                                >
-                                    Continue <ChevronRightIcon size={16} />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Step 2: Details */}
-                    {step === 2 && (
-                        <div>
-                            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: 6 }}>Provide details</h2>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 20 }}>
-                                The more detail you provide, the faster we can resolve the issue.
-                            </p>
-
-                            <div className="info-form-group">
-                                <label className="info-form-label">Description *</label>
-                                <div style={{ position: 'relative' }}>
-                                    <textarea
-                                        className="info-form-textarea"
-                                        placeholder="Describe the issue in detail. What happened? What did you expect?"
-                                        value={description}
-                                        onChange={e => setDescription(e.target.value)}
-                                        rows={5}
-                                        maxLength={2000}
-                                    />
-                                    <span style={{ position: 'absolute', bottom: 8, right: 12, fontSize: '0.72rem', color: description.length > 1800 ? '#ef4444' : 'var(--text-tertiary)' }}>
-                                        {description.length}/2000
-                                    </span>
-                                </div>
-                                {errors.description && <span className="info-form-error">{errors.description}</span>}
-                            </div>
-
-                            <div className="info-form-group">
-                                <label className="info-form-label">URL (optional)</label>
-                                <input
-                                    className="info-form-input"
-                                    type="text"
-                                    placeholder="https://arizonalex.com/..."
-                                    value={url}
-                                    onChange={e => setUrl(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="info-form-group">
-                                <label className="info-form-label">Priority</label>
-                                <div style={{ display: 'flex', gap: 10 }}>
-                                    {['low', 'medium', 'high'].map(p => (
-                                        <button
-                                            key={p}
-                                            className={`info-priority-btn ${priority === p ? 'active' : ''}`}
-                                            onClick={() => setPriority(p)}
-                                            data-priority={p}
-                                        >
-                                            {p.charAt(0).toUpperCase() + p.slice(1)}
                                         </button>
                                     ))}
                                 </div>
                             </div>
+                        )}
 
-                            <div className="info-form-group">
-                                <label className="info-form-label">Screenshot (optional)</label>
-                                <div
-                                    className="info-upload-area"
-                                    onDragOver={e => e.preventDefault()}
-                                    onDrop={e => { e.preventDefault(); setFileName(e.dataTransfer.files[0]?.name || ''); }}
-                                >
-                                    {fileName ? (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            <ImageIcon size={20} />
-                                            <span style={{ fontSize: '0.85rem' }}>{fileName}</span>
-                                            <button onClick={() => setFileName('')} style={{ color: 'var(--text-tertiary)' }}><XIcon size={16} /></button>
+                        {/* Step 2: Details */}
+                        {step === 2 && (
+                            <div className="fade-in">
+                                <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 16 }}>Provide Details</h2>
+                                
+                                {/* Anonymous toggle */}
+                                <div className="info-card" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>Anonymous Report</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Your identity will be hidden from moderators</div>
+                                    </div>
+                                    <button onClick={() => setIsAnonymous(!isAnonymous)} style={{
+                                        width: 48, height: 26, borderRadius: 13, cursor: 'pointer', transition: 'background 0.2s', position: 'relative',
+                                        background: isAnonymous ? 'var(--primary)' : 'var(--bg-tertiary)', border: `1px solid ${isAnonymous ? 'var(--primary)' : 'var(--border)'}`
+                                    }}>
+                                        <div style={{
+                                            width: 20, height: 20, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2,
+                                            left: isAnonymous ? 25 : 2, transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
+                                        }} />
+                                    </button>
+                                </div>
+
+                                <div className="info-form-group">
+                                    <label className="info-form-label">Description</label>
+                                    <textarea className="info-form-textarea" value={description} onChange={e => setDescription(e.target.value)} rows={8} placeholder="Describe the issue in detail..." />
+                                </div>
+
+                                <div className="info-form-group">
+                                    <label className="info-form-label">Evidence URL (optional)</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <div style={{ position: 'absolute', top: 12, left: 12, color: 'var(--text-tertiary)' }}><LinkIcon size={16} /></div>
+                                        <input className="info-form-input" type="url" value={evidenceUrl} onChange={e => setEvidenceUrl(e.target.value)} placeholder="https://arizonalex.com/post/..."
+                                            style={{ paddingLeft: 36 }} />
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+                                    <button className="btn btn-secondary" onClick={() => setStep(1)} style={{ flex: 1 }}>Back</button>
+                                    <button className="btn btn-primary" onClick={() => setStep(3)} style={{ flex: 2 }} disabled={!description.trim()}>Review Report</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 3: Review */}
+                        {step === 3 && (
+                            <div className="fade-in">
+                                <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 16 }}>Review & Submit</h2>
+                                <div className="info-card" style={{ padding: 22, marginBottom: 16 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12, fontSize: '0.82rem' }}>
+                                        <span style={{ fontWeight: 700 }}>Type: <span style={{ color: 'var(--primary)' }}>{reportTypes.find(t => t.id === selectedType)?.label}</span></span>
+                                        <span style={{ color: 'var(--text-tertiary)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{isAnonymous ? <><LockIcon size={14} /> Anonymous</> : <><UserIcon size={14} /> Identified</>}</span>
+                                    </div>
+                                    <div style={{ padding: 14, background: 'var(--bg-secondary)', borderRadius: 10, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', maxHeight: 200, overflowY: 'auto' }}>
+                                        {description}
+                                    </div>
+                                    {evidenceUrl && (
+                                        <div style={{ marginTop: 10, fontSize: '0.78rem', color: '#7C3AED', wordBreak: 'break-all' }}>
+                                            <LinkIcon size={12} /> {evidenceUrl}
                                         </div>
-                                    ) : (
-                                        <>
-                                            <UploadIcon size={28} />
-                                            <p style={{ fontSize: '0.85rem', marginTop: 8 }}>Drag & drop a screenshot, or <span style={{ color: '#7C3AED', fontWeight: 600 }}>click to browse</span></p>
-                                            <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', marginTop: 4 }}>PNG, JPG up to 5MB</p>
-                                        </>
                                     )}
                                 </div>
-                            </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24, gap: 12 }}>
-                                <button className="btn btn-outline" onClick={() => setStep(1)}>Back</button>
-                                <button
-                                    className="btn btn-primary"
-                                    disabled={!description.trim() || description.trim().length < 20}
-                                    onClick={handleSubmit}
-                                    style={{ opacity: description.trim().length >= 20 ? 1 : 0.5 }}
-                                >
-                                    Submit Report <ChevronRightIcon size={16} />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Step 3: Confirmation */}
-                    {step === 3 && submitted && (
-                        <div className="info-card" style={{ textAlign: 'center', padding: '48px 24px' }}>
-                            <div className="info-success-icon">
-                                <CheckCircleIcon size={40} />
-                            </div>
-                            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: 20, marginBottom: 8 }}>Report Submitted</h2>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 24, maxWidth: 400, margin: '0 auto 24px' }}>
-                                Thank you for helping improve Arizonalex. We take every report seriously.
-                            </p>
-                            <div className="info-card" style={{ background: 'var(--bg-tertiary)', maxWidth: 340, margin: '0 auto 24px', padding: 20 }}>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginBottom: 4 }}>Ticket Number</div>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#7C3AED', marginBottom: 12 }}>{ticketNumber}</div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                                    <ClockIcon size={14} /> Estimated response: 24–48 hours
+                                <div style={{ display: 'flex', gap: 12 }}>
+                                    <button className="btn btn-secondary" onClick={() => setStep(2)} style={{ flex: 1 }} disabled={submitting}>Edit</button>
+                                    <button className="btn btn-primary" onClick={handleSubmit} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={submitting}>
+                                        {submitting ? <span className="auth-spinner" style={{ width: 18, height: 18, borderTopColor: '#fff', borderRightColor: '#fff' }} /> : <><SendIcon size={16} /> Submit Report</>}
+                                    </button>
                                 </div>
                             </div>
-                            <button className="btn btn-primary" onClick={() => { setStep(1); setSubmitted(false); setSelectedType(''); setDescription(''); setUrl(''); setFileName(''); }}>
-                                Submit Another Report
-                            </button>
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
 
-                {/* Sidebar: Recent Reports */}
-                <div style={{ flex: '0 0 300px', minWidth: 260 }}>
-                    <div className="info-card" style={{ position: 'sticky', top: 20 }}>
-                        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <ClockIcon size={16} /> Your Recent Reports
-                        </h3>
-                        {recentReports.map(r => {
-                            const status = STATUS_COLORS[r.status];
-                            return (
-                                <div key={r.id} style={{ padding: '12px 0', borderTop: '1px solid var(--border)' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-tertiary)' }}>{r.id}</span>
-                                        <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '2px 8px', borderRadius: 8, background: status.bg, color: status.text }}>{status.label}</span>
+                    {/* Sidebar */}
+                    <div style={{ flex: '0 1 300px', minWidth: 260 }}>
+                        <div className="info-card" style={{ padding: 22, marginBottom: 16 }}>
+                            <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <ShieldIcon size={16} /> Safety Tips
+                            </h3>
+                            {safetyTips.map((tip, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                    <CheckCircleIcon size={14} />
+                                    <span>{tip}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="info-card" style={{ padding: 22, marginBottom: 16 }}>
+                            <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <EyeIcon size={16} /> What Happens Next?
+                            </h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {['Report received & classified', 'Assigned to reviewer (24h)', 'Evidence collected & analyzed', 'Action taken & you\'re notified'].map((step, i) => (
+                                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                                        <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800, flexShrink: 0, color: 'var(--text-tertiary)' }}>
+                                            {i + 1}
+                                        </div>
+                                        <span style={{ lineHeight: 1.4 }}>{step}</span>
                                     </div>
-                                    <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: 4 }}>{r.title}</div>
-                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>{r.type} · {r.date}</div>
-                                </div>
-                            );
-                        })}
+                                ))}
+                            </div>
+                        </div>
+
+                        <Link href="/guidelines" className="info-card info-card-hover" style={{ padding: 18, display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+                            <FileTextIcon size={18} />
+                            <div>
+                                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)' }}>Community Guidelines</div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Review our content policies</div>
+                            </div>
+                        </Link>
                     </div>
                 </div>
             </div>

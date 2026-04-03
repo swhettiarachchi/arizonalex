@@ -1,0 +1,148 @@
+
+> arizonalex@0.1.0 lint
+> eslint
+
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\patch_news.js
+  1:12  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\explore\page.tsx
+  76:34  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\explore\page.tsx:76:34
+  74 |     }, []);
+  75 |
+> 76 |     useEffect(() => { if (query) setSearchQuery(decodeURIComponent(query.replace(/^#/, ''))); }, [query]);
+     |                                  ^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  77 |
+  78 |     // Fetch posts from API
+  79 |     useEffect(() => {                                                                   react-hooks/set-state-in-effect
+  88:9   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\explore\page.tsx:88:9
+  86 |             ? `/api/posts?q=${encodeURIComponent(searchQuery)}`
+  87 |             : `/api/posts?tab=${tab}`;
+> 88 |         setPostsLoading(true);
+     |         ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  89 |         fetch(url)
+  90 |             .then(r => r.json())
+  91 |             .then(data => { if (data.posts) setFeedPosts(data.posts); })  react-hooks/set-state-in-effect
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\global-politics\country\[slug]\page.tsx
+  186:6   warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        react-hooks/exhaustive-deps
+  418:15  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react/no-unescaped-entities
+  418:33  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react/no-unescaped-entities
+  758:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\global-politics\country\[slug]\page.tsx:758:5
+  756 |   useEffect(() => {
+  757 |     if (!slug) return;
+> 758 |     setLoading(true);
+      |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  759 |     fetch(`/api/global-politics/country/${slug}`)
+  760 |       .then(r => r.json())
+  761 |       .then(data => { if (data.country) setCountry(data.country); })  react-hooks/set-state-in-effect
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\help\article\[id]\page.tsx
+  118:115  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  118:131  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\messages\page.tsx
+  284:8   warning  React Hook useEffect has a missing dependency: 'activeChat'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/exhaustive-deps
+  330:25  error    Error: Cannot access variable before it is declared
+
+`sendVoiceMessage` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\messages\page.tsx:330:25
+  328 |                         if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+  329 |                         const mockBase64 = "data:audio/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAARh4EBBwE=";
+> 330 |                         sendVoiceMessage(mockBase64);
+      |                         ^^^^^^^^^^^^^^^^ `sendVoiceMessage` accessed before it is declared
+  331 |                     },
+  332 |                     stream: { getTracks: () => [] }
+  333 |                 } as unknown as MediaRecorder;
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\messages\page.tsx:403:5
+  401 |
+  402 |     /* ─── Send Voice Message ─── */
+> 403 |     async function sendVoiceMessage(base64Audio: string) {
+      |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 404 |         if (!activeChat) return;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 405 |         const msgCopy = `[AUDIO]:${base64Audio}`;
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 422 |         }
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 423 |     };
+      | ^^^^^^ `sendVoiceMessage` is declared here
+  424 |
+  425 |     /* ─── File Attachment Handling ─── */
+  426 |     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {  react-hooks/immutability
+  339:8   warning  React Hook useCallback has a missing dependency: 'sendVoiceMessage'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/exhaustive-deps
+  362:8   warning  React Hook useCallback has a missing dependency: 'sendVoiceMessage'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/exhaustive-deps
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\news\page.tsx
+  168:60  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\news\page.tsx:168:60
+  166 |     const [stats, setStats] = useState<any>({ totalArticles: 0, breakingCount: 0, avgCredibility: 90, sentimentBreakdown: {}, topSources: [] });
+  167 |     const [loading, setLoading] = useState(true);
+> 168 |     const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
+      |                                                            ^^^^^^^^^^ Cannot call impure function
+  169 |
+  170 |     const fetchData = useCallback(async () => {
+  171 |         try {  react-hooks/purity
+  236:32  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\news\page.tsx:236:32
+  234 |     }, [articles]);
+  235 |
+> 236 |     const secAgo = Math.floor((Date.now() - lastUpdated) / 1000);
+      |                                ^^^^^^^^^^ Cannot call impure function
+  237 |
+  238 |     if (loading) {
+  239 |         return (                                                                                                                                                                                                                                             react-hooks/purity
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\report\page.tsx
+  59:41  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\report\page.tsx:59:41
+  57 |             if (saved) {
+  58 |                 const draft = JSON.parse(saved);
+> 59 |                 if (draft.selectedType) setSelectedType(draft.selectedType);
+     |                                         ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  60 |                 if (draft.description) setDescription(draft.description);
+  61 |                 if (draft.url) setUrl(draft.url);
+  62 |                 if (draft.priority) setPriority(draft.priority);  react-hooks/set-state-in-effect
+
+✖ 16 problems (12 errors, 4 warnings)
+

@@ -1,0 +1,73 @@
+﻿Γû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 34.7s
+  Running TypeScript ...
+node.exe : Failed to 
+compile.
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified    : 
+(Failed to compil    
+e.:String) [], Remo    
+teException
+    + FullyQualifiedErr    
+orId : NativeComman    
+dError
+ 
+
+./src/app/debates/[id]/page
+.tsx:145:13
+Type error: Property 
+'token' does not exist on 
+type 'AuthContextType'.
+
+[0m [90m 143 |[39m     
+[36mconst[39m router 
+[33m=[39m 
+useRouter()[33m;[39m
+ [90m 144 |[39m     
+[36mconst[39m debateId 
+[33m=[39m 
+params[33m.[39mid 
+[36mas[39m 
+string[33m;[39m
+[31m[1m>[22m[39m[90m 
+145 |[39m     
+[36mconst[39m { 
+token[33m,[39m 
+user[33m,[39m isLoggedIn 
+} [33m=[39m 
+useAuth()[33m;[39m
+ [90m     |[39m          
+   [31m[1m^[22m[39m
+ [90m 146 |[39m     
+[36mconst[39m { socket } 
+[33m=[39m 
+useSocket()[33m;[39m
+ [90m 147 |[39m     
+[36mconst[39m 
+[debate[33m,[39m 
+setDebate] [33m=[39m useS
+tate[33m<[39m[33mDebate
+[39m [33m|[39m [36mnull
+[39m[33m>[39m([36mnull[
+39m)[33m;[39m
+ [90m 148 |[39m     
+[36mconst[39m 
+[messages[33m,[39m 
+setMessages] [33m=[39m us
+eState[33m<[39m[33mDebat
+eMessage[39m[][33m>[39m(
+[])[33m;[39m[0m
+Next.js build worker 
+exited with code: 1 and 
+signal: null

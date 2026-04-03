@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { marketData as mockMarketData } from '@/lib/mock-data';
 
 const TICKERS = [
     { symbol: '^GSPC', label: 'S&P 500', url: 'https://www.tradingview.com/chart/?symbol=SP%3ASPX' },
@@ -79,23 +78,19 @@ export async function GET() {
             TICKERS.map((ticker, index) => fetchQuote(ticker, index))
         );
 
-        // Map results, falling back to mock data for failed fetches
+        // Map results, falling back to N/A for failed fetches
         const marketData = TICKERS.map((ticker, index) => {
             const result = results[index];
             if (result) return result;
 
-            // Find matching mock data entry
-            const mock = mockMarketData.find(m => m.symbol === ticker.label) ?? mockMarketData[index];
-            return mock
-                ? { ...mock, id: String(index + 1) }
-                : {
-                    id: String(index + 1),
-                    symbol: ticker.label,
-                    price: 'N/A',
-                    change: 'N/A',
-                    positive: true,
-                    url: ticker.url,
-                };
+            return {
+                id: String(index + 1),
+                symbol: ticker.label,
+                price: 'N/A',
+                change: 'N/A',
+                positive: true,
+                url: ticker.url,
+            };
         });
 
         // Only cache if we got at least some live data
@@ -111,6 +106,6 @@ export async function GET() {
         if (cachedMarketData) {
             return NextResponse.json({ marketData: cachedMarketData });
         }
-        return NextResponse.json({ marketData: mockMarketData });
+        return NextResponse.json({ marketData: [] }, { status: 500 });
     }
 }

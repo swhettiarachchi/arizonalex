@@ -1,19 +1,13 @@
 import { NextResponse } from 'next/server';
-import { economicIndicators } from '@/lib/mock-data';
 
-// Generate realistic pseudo-live data based on the current hour so it fluctuates realistically
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
 function generateSyntheticQuote(symbol: string, basePrice: number, volatility: number) {
     const now = new Date();
-    // Use day of year + hour to create a deterministic but changing seed
     const seed = now.getDate() + now.getHours() + symbol.charCodeAt(0);
-
-    // Simulate a drift
     const drift = (Math.sin(seed) * volatility);
     const currentPrice = basePrice + drift;
-
-    // Simulate daily change
     const percentChange = (drift / basePrice) * 100;
-
     return {
         price: currentPrice.toFixed(2),
         change: Math.abs(percentChange).toFixed(2) + '%',
@@ -21,13 +15,10 @@ function generateSyntheticQuote(symbol: string, basePrice: number, volatility: n
     };
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-
 export async function GET() {
     try {
-        // Fetch GovTrack bill count and backend system stats in parallel
         const [govTrackRes, backendRes] = await Promise.all([
-            fetch('https://www.govtrack.us/api/v2/bill?limit=0', { cache: 'no-store' }),
+            fetch('https://www.govtrack.us/api/v2/bill?limit=0', { cache: 'no-store' }).catch(() => null),
             fetch(`${API_BASE}/stats`, { cache: 'no-store' }).catch(() => null)
         ]);
 
@@ -36,18 +27,20 @@ export async function GET() {
         let eventCount = 24;
         let userCount = 2400000;
 
-        if (govTrackRes.ok) {
-            const govData = await govTrackRes.json();
-            if (govData.meta && govData.meta.total_count) {
-                billCount = govData.meta.total_count;
-            }
+        if (govTrackRes && govTrackRes.ok) {
+            try {
+                const govData = await govTrackRes.json();
+                if (govData.meta?.total_count) billCount = govData.meta.total_count;
+            } catch { /* ignore */ }
         }
 
         if (backendRes && backendRes.ok) {
-            const bData = await backendRes.json();
-            pollCount = bData.polls || pollCount;
-            eventCount = bData.events || eventCount;
-            userCount = (bData.users || 0) + 2400000;
+            try {
+                const bData = await backendRes.json();
+                pollCount = bData.polls || pollCount;
+                eventCount = bData.events || eventCount;
+                userCount = (bData.users || 0) + 2400000;
+            } catch { /* ignore */ }
         }
 
         const stats = [
@@ -57,7 +50,6 @@ export async function GET() {
             { label: 'Upcoming Events', val: eventCount.toString(), change: '+15%', up: true },
         ];
 
-        // Additional Analytics for the "Analytics" tab
         const analytics = {
             overview: [
                 { label: 'Voter Turnout Prediction', val: '68%', change: '+3%', up: true },
@@ -78,25 +70,23 @@ export async function GET() {
         const spyData = generateSyntheticQuote('SPY', 510.50, 4.5);
         const tltData = generateSyntheticQuote('TLT', 92.10, 1.2);
 
-        const liveEconomicIndicators = [
+        const economicIndicators = [
             { id: 'e1', label: 'S&P 500 (Market Confidence)', value: spyData.price, change: spyData.change, positive: spyData.positive, period: 'Live', url: 'https://www.tradingview.com/chart/?symbol=SP%3ASPX' },
             { id: 'e2', label: 'Treasury Bonds (TLT)', value: tltData.price, change: tltData.change, positive: tltData.positive, period: 'Live', url: 'https://www.tradingview.com/chart/?symbol=NASDAQ%3ATLT' },
             { id: 'e3', label: 'Unemployment', value: '4.2%', change: '+0.1%', positive: false, period: 'Feb 2026', url: 'https://www.tradingview.com/symbols/ECONOMICS-USUR/' },
             { id: 'e4', label: 'Inflation (CPI)', value: '3.1%', change: '-0.2%', positive: true, period: 'Feb 2026', url: 'https://www.tradingview.com/symbols/ECONOMICS-USCPI/' }
         ];
 
-        return NextResponse.json({ stats, analytics, economicIndicators: liveEconomicIndicators });
-
+        return NextResponse.json({ stats, analytics, economicIndicators });
     } catch (e: any) {
-        console.warn('Failed to generate stats data. Falling back to default.', e.message);
-        const fallbackStats = [
-            { label: 'Active Voters', val: '2.4M', change: '+12%', up: true },
-            { label: 'Active Polls', val: '156', change: '+8%', up: true },
-            { label: 'Bills in Discussion', val: '89', change: '+3%', up: true },
-            { label: 'Upcoming Events', val: '24', change: '+15%', up: true },
-        ];
+        console.warn('Failed to generate stats data:', e.message);
         return NextResponse.json({
-            stats: fallbackStats,
+            stats: [
+                { label: 'Active Voters', val: '2.4M', change: '+12%', up: true },
+                { label: 'Active Polls', val: '156', change: '+8%', up: true },
+                { label: 'Bills in Discussion', val: '89', change: '+3%', up: true },
+                { label: 'Upcoming Events', val: '24', change: '+15%', up: true },
+            ],
             analytics: {
                 overview: [
                     { label: 'Voter Turnout Prediction', val: '68%', change: '+3%', up: true },
@@ -113,7 +103,7 @@ export async function GET() {
                 ],
                 trends: [65, 45, 78, 52, 88, 71, 95, 60, 82, 70, 55, 90]
             },
-            economicIndicators: economicIndicators.slice(0, 4)
+            economicIndicators: []
         });
     }
 }

@@ -1,10 +1,12 @@
 const router = require('express').Router();
 const { body } = require('express-validator');
-const { register, login, getMe } = require('../controllers/authController');
+const { register, login, getMe, googleAuth, verify2FA } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
+const { authLimiter } = require('../middleware/rateLimiter');
 
 router.post(
     '/register',
+    authLimiter,
     [
         body('name').trim().notEmpty().withMessage('Name is required'),
         body('email').isEmail().withMessage('Valid email is required'),
@@ -14,7 +16,9 @@ router.post(
     register
 );
 
-router.post('/login', login);
+router.post('/login', authLimiter, login);
+router.post('/verify-2fa', authLimiter, verify2FA);
+router.post('/google', googleAuth);
 router.get('/me', protect, getMe);
 
 module.exports = router;

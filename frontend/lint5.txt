@@ -1,0 +1,57 @@
+
+> arizonalex@0.1.0 lint
+> eslint
+
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\global-politics\country\[slug]\page.tsx
+  186:6  warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\messages\page.tsx
+  284:8   warning  React Hook useEffect has a missing dependency: 'activeChat'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react-hooks/exhaustive-deps
+  321:40  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `sendVoiceMessage`, but the source dependencies were []. Inferred dependency not present in source.
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\messages\page.tsx:321:40
+  319 |
+  320 |     /* ─── Recording Logic ─── */
+> 321 |     const beginRecording = useCallback(async () => {
+      |                                        ^^^^^^^^^^^^^
+> 322 |         try {
+      | ^^^^^^^^^^^^^
+> 323 |             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      …
+      | ^^^^^^^^^^^^^
+> 361 |         }
+      | ^^^^^^^^^^^^^
+> 362 |     }, []);
+      | ^^^^^^ Could not preserve existing manual memoization
+  363 |
+  364 |     const finishRecordingAndSend = useCallback(() => {
+  365 |         if (!mediaRecorderRef.current || !isRecording) return;                                                                                                                                                                                          react-hooks/preserve-manual-memoization
+  362:8   warning  React Hook useCallback has a missing dependency: 'sendVoiceMessage'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/exhaustive-deps
+  364:48  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `sendVoiceMessage`, but the source dependencies were [isRecording]. Inferred different dependency than source.
+
+C:\Users\INTEL\Documents\arizonalex-repo\arizonalex\frontend\src\app\messages\page.tsx:364:48
+  362 |     }, []);
+  363 |
+> 364 |     const finishRecordingAndSend = useCallback(() => {
+      |                                                ^^^^^^^
+> 365 |         if (!mediaRecorderRef.current || !isRecording) return;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 366 |         
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 384 |         if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 385 |     }, [isRecording]);
+      | ^^^^^^ Could not preserve existing manual memoization
+  386 |
+  387 |     const cancelRecording = useCallback(() => {
+  388 |         if (mediaRecorderRef.current && isRecording) {  react-hooks/preserve-manual-memoization
+  385:8   warning  React Hook useCallback has a missing dependency: 'sendVoiceMessage'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/exhaustive-deps
+
+✖ 6 problems (2 errors, 4 warnings)
+

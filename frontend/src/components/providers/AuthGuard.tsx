@@ -20,8 +20,12 @@ export function AuthGateProvider({ children }: { children: ReactNode }) {
     const router = useRouter();
 
     const requireAuth = useCallback((action: () => void) => {
-        action();
-    }, []);
+        if (isLoggedIn) {
+            action();
+        } else {
+            setShowPrompt(true);
+        }
+    }, [isLoggedIn]);
 
     return (
         <AuthGateContext.Provider value={{ requireAuth }}>

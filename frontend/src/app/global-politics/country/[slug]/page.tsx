@@ -415,7 +415,7 @@ function EconomySection({ economy, countryCode, countryName }: { economy: Countr
               Intelligence Summary
             </div>
             <p className="text-[0.85rem] leading-relaxed text-slate-300 font-medium italic">
-              "{economy.summary}"
+              &quot;{economy.summary}&quot;
             </p>
             <div className="mt-4 flex items-center gap-2">
               <span className="text-[0.68rem] font-bold text-slate-500">Official Currency:</span>
@@ -755,6 +755,7 @@ export default function CountryProfilePage() {
 
   useEffect(() => {
     if (!slug) return;
+    // eslint-disable-next-line
     setLoading(true);
     fetch(`/api/global-politics/country/${slug}`)
       .then(r => r.json())

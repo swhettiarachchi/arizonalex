@@ -398,7 +398,7 @@ export const allCountries: CountryData[] = [
     famousLeader: c.famousLeader!,
     risingPoliticians: c.risingPoliticians || defaultRising,
     timeline: defaultTimeline,
-    aiScores: { influence: Math.floor(c.population! / 20000000) + 20, popularity: Math.floor(Math.random() * 40) + 40, stability: Math.floor(c.democracyIndex! * 10) },
+    aiScores: { influence: Math.floor(c.population! / 20000000) + 20, popularity: ((c.population! ?? 100) % 40) + 40, stability: Math.floor(c.democracyIndex! * 10) },
     aiSummary: `${c.name} operates under a ${c.politicalSystem?.toLowerCase()} system. Current leadership focuses on national development and regional stability.`,
     economy: {
       gdp: `$${(c.population! * 0.00005).toFixed(1)} Trillion`,

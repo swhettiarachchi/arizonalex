@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import ThemeProvider from "@/components/providers/ThemeProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { SocketProvider } from "@/components/providers/SocketProvider";
 import { AuthGateProvider } from "@/components/providers/AuthGuard";
 import AppShell from "./AppShell";
 
@@ -13,8 +14,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Arizonalex – Political Social Platform",
-  description: "AI-powered political social media platform for governance, leadership, and public engagement.",
+  title: "Arizonalex | The Premier Network for Politics, Business & Crypto",
+  description: "Join Arizonalex, the leading AI-powered social platform connecting global professionals, thought leaders, and enthusiasts in politics, business, finance, and cryptocurrency.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -23,9 +24,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body suppressHydrationWarning>
         <ThemeProvider>
           <AuthProvider>
-            <AuthGateProvider>
-              <AppShell>{children}</AppShell>
-            </AuthGateProvider>
+            <SocketProvider>
+              <AuthGateProvider>
+                <AppShell>{children}</AppShell>
+              </AuthGateProvider>
+            </SocketProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

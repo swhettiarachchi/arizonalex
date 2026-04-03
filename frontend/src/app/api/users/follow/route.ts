@@ -1,37 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { store, getUserFromCookies } from '@/lib/store';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export async function POST(req: NextRequest) {
     const token = req.cookies.get('auth_token')?.value;
-    const currentUser = getUserFromCookies(token);
-
-    if (!currentUser) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {
-        const { username } = await req.json();
-        if (!username) {
-            return NextResponse.json({ error: 'Username is required' }, { status: 400 });
+        const body = await req.json();
+        const { userId, username, action } = body;
+
+        // Resolve userId from username if needed
+        let targetId = userId;
+        if (!targetId && username) {
+            const userRes = await fetch(`${API_BASE}/users/username/${username}`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            });
+            if (userRes.ok) {
+                const userData = await userRes.json();
+                targetId = userData.user?._id || userData.user?.id;
+            }
         }
 
-        const followerId = currentUser.id;
-        if (!store.follows[username]) {
-            store.follows[username] = new Set<string>();
+        if (!targetId) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        let following: boolean;
-        if (store.follows[username].has(followerId)) {
-            store.follows[username].delete(followerId);
-            following = false;
-        } else {
-            store.follows[username].add(followerId);
-            following = true;
+        // Determine follow or unfollow
+        const endpoint = action === 'unfollow' ? 'unfollow' : 'follow';
+        const res = await fetch(`${API_BASE}/users/${targetId}/${endpoint}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            // If already following, try toggling
+            if (data.message?.includes('Already following')) {
+                const unfollowRes = await fetch(`${API_BASE}/users/${targetId}/unfollow`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                });
+                const unfollowData = await unfollowRes.json();
+                return NextResponse.json({ following: false, ...unfollowData }, { status: unfollowRes.status });
+            }
+            return NextResponse.json(data, { status: res.status });
         }
 
         return NextResponse.json({
-            following,
-            followerCount: store.follows[username].size,
+            following: endpoint === 'follow',
+            ...data,
         });
     } catch {
         return NextResponse.json({ error: 'Invalid request' }, { status: 400 });

@@ -15,6 +15,21 @@ export interface User {
   followers: number;
   following: number;
   joined: string;
+  // Political fields
+  position?: string;
+  ideology?: string;
+  yearsActive?: string;
+  country?: string;
+  campaignPromises?: string[];
+  achievements?: string[];
+  // Business fields
+  company?: string;
+  industry?: string;
+  services?: string[];
+  portfolioUrl?: string;
+  // Analytics
+  profileViews?: number;
+  supportPercentage?: number;
 }
 
 export interface Post {
@@ -22,6 +37,8 @@ export interface Post {
   author: User;
   content: string;
   type: 'text' | 'image' | 'video' | 'thread' | 'policy';
+  policyTitle?: string;
+  policyCategory?: string;
   images?: string[];
   video?: string;
   likes: number;
@@ -104,51 +121,75 @@ export const users: User[] = [
     bio: 'Senator, District 12. Fighting for transparent governance and equal opportunity.',
     role: 'politician', verified: true, party: 'Progressive Alliance',
     followers: 284000, following: 1200, joined: 'January 2021',
-    banner: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)'
+    banner: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+    position: 'Senator', ideology: 'Progressive', yearsActive: '2021 – Present', country: 'United States',
+    campaignPromises: ['Digital Privacy Act', 'Healthcare Reform', 'Education Equity', 'Climate Action Fund'],
+    achievements: ['Passed Digital Privacy Act', 'Co-authored Education Equity Bill', 'Led bipartisan infrastructure coalition'],
+    profileViews: 1245000, supportPercentage: 68
   },
   {
     id: '2', name: 'James Rivera', username: 'jamesrivera', avatar: '/avatars/james-rivera.png',
     bio: 'Political journalist @NationalPost. Covering Capitol Hill since 2015.',
     role: 'journalist', verified: true,
-    followers: 156000, following: 890, joined: 'March 2020'
+    followers: 156000, following: 890, joined: 'March 2020',
+    company: 'National Post', industry: 'Media & Journalism', profileViews: 890000
   },
   {
     id: '3', name: 'Diana Chen', username: 'dianachen', avatar: '/avatars/diana-chen.png',
     bio: 'Governor of State. Building bridges, not walls. #TransparentGovernance',
     role: 'politician', verified: true, party: 'Unity Party',
-    followers: 520000, following: 340, joined: 'June 2019'
+    followers: 520000, following: 340, joined: 'June 2019',
+    position: 'Governor', ideology: 'Centrist', yearsActive: '2019 – Present', country: 'United States',
+    campaignPromises: ['Green Energy Initiative', 'Carbon Emissions Reduction 50%', 'Police Reform', 'Rural Broadband'],
+    achievements: ['Launched $4.2B Green Energy Initiative', 'Reduced unemployment by 1.8%', 'Passed Clean Energy Transition Fund'],
+    profileViews: 2780000, supportPercentage: 74
   },
   {
     id: '4', name: 'Marcus Thompson', username: 'marcusthompson', avatar: '/avatars/marcus-thompson.png',
     bio: 'City Council Member. Your voice in local government.',
     role: 'official', verified: true, party: 'Citizens First',
-    followers: 45000, following: 2100, joined: 'September 2022'
+    followers: 45000, following: 2100, joined: 'September 2022',
+    position: 'City Council Member', ideology: 'Moderate', yearsActive: '2022 – Present', country: 'United States',
+    campaignPromises: ['Balanced Budget', 'Community Development Plan', 'Transparent Governance Portal'],
+    achievements: ['Launched community development plan', 'Hosted 50+ town halls'],
+    profileViews: 312000, supportPercentage: 62
   },
   {
     id: '5', name: 'Alex Jordan', username: 'alexjordan', avatar: '/avatars/alex-jordan.png',
     bio: 'Engaged citizen. Democracy is not a spectator sport.',
     role: 'citizen', verified: false,
-    followers: 1200, following: 450, joined: 'December 2023'
+    followers: 1200, following: 450, joined: 'December 2023',
+    profileViews: 4500
   },
   {
     id: '6', name: 'Priya Patel', username: 'priyapatel', avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=200&h=200&auto=format&fit=crop',
     bio: 'Policy researcher & analyst. Data-driven governance advocate.',
     role: 'journalist', verified: true,
-    followers: 89000, following: 670, joined: 'February 2021'
+    followers: 89000, following: 670, joined: 'February 2021',
+    company: 'Policy Research Institute', industry: 'Research & Analytics', profileViews: 567000
   },
   {
     id: '7', name: 'Robert Kim', username: 'robertkim', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&h=200&auto=format&fit=crop',
     bio: 'Secretary of Infrastructure. Rebuilding America\'s future.',
     role: 'politician', verified: true, party: 'National Progress',
-    followers: 310000, following: 200, joined: 'April 2020'
+    followers: 310000, following: 200, joined: 'April 2020',
+    position: 'Secretary of Infrastructure', ideology: 'Progressive', yearsActive: '2020 – Present', country: 'United States',
+    campaignPromises: ['National High-Speed Rail', 'Bridge Modernization', 'Rural Connectivity'],
+    achievements: ['Broke ground on National HSR in 3 states', '200,000+ jobs created via infrastructure bill'],
+    profileViews: 1890000, supportPercentage: 71
   },
   {
     id: '8', name: 'Elena Vasquez', username: 'elenavasquez', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=200&h=200&auto=format&fit=crop',
     bio: 'Education policy champion. Every child deserves a future.',
     role: 'politician', verified: true, party: 'Progressive Alliance',
-    followers: 178000, following: 560, joined: 'July 2021'
+    followers: 178000, following: 560, joined: 'July 2021',
+    position: 'State Representative', ideology: 'Progressive', yearsActive: '2021 – Present', country: 'United States',
+    campaignPromises: ['Universal Pre-K Access', 'Teacher Pay Reform', 'STEM Education Fund'],
+    achievements: ['Universal Pre-K bill passed committee', 'Secured $800M education funding'],
+    profileViews: 920000, supportPercentage: 77
   },
 ];
+
 
 // ---- MOCK POSTS ----
 export const posts: Post[] = [
@@ -167,7 +208,7 @@ export const posts: Post[] = [
   {
     id: '3', author: users[2],
     content: 'Proud to announce our state\'s new Green Energy Initiative. By 2030, we aim for 80% renewable energy. Here\'s our roadmap:\n\n[DONE] Phase 1: Solar farm expansion (2025)\n[DONE] Phase 2: Wind energy corridors (2026)\n[DONE] Phase 3: EV infrastructure (2027)\n[IN PROGRESS] Phase 4: Grid modernization (2028-2030)\n\n#CleanEnergy #GreenFuture',
-    type: 'policy', likes: 34500, comments: 8700, reposts: 12000, timestamp: '6h ago',
+    type: 'policy', policyTitle: 'Green Energy Initiative 2030', policyCategory: 'Environment', likes: 34500, comments: 8700, reposts: 12000, timestamp: '6h ago',
     hashtags: ['CleanEnergy', 'GreenFuture']
   },
   {

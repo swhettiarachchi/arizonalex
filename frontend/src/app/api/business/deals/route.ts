@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import { store } from '@/lib/store';
 
 function formatYahooDate(unixTime: number): string {
     const d = new Date(unixTime * 1000);
     const now = new Date();
     const diffHours = (now.getTime() - d.getTime()) / (1000 * 60 * 60);
-
     if (diffHours < 24) return `${Math.max(1, Math.floor(diffHours))}h ago`;
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
@@ -17,12 +15,8 @@ function parseDealValue(text: string): string {
 
 function determineDealStatus(title: string): string {
     const lower = title.toLowerCase();
-    if (lower.includes('rumor') || lower.includes('consider') || lower.includes('weigh') || lower.includes('eye') || lower.includes('talk')) {
-        return 'Rumored';
-    }
-    if (lower.includes('close') || lower.includes('complete')) {
-        return 'Closed';
-    }
+    if (lower.includes('rumor') || lower.includes('consider') || lower.includes('weigh') || lower.includes('eye') || lower.includes('talk')) return 'Rumored';
+    if (lower.includes('close') || lower.includes('complete')) return 'Closed';
     return 'Announced';
 }
 
@@ -41,7 +35,7 @@ function guessSector(title: string): string {
     if (lower.includes('bank') || lower.includes('finan') || lower.includes('capital') || lower.includes('fund')) return 'Financials';
     if (lower.includes('oil') || lower.includes('gas') || lower.includes('energy') || lower.includes('power')) return 'Energy';
     if (lower.includes('retail') || lower.includes('store') || lower.includes('brand')) return 'Consumer';
-    return 'Industrials'; // Fallback
+    return 'Industrials';
 }
 
 export async function GET() {
@@ -53,13 +47,12 @@ export async function GET() {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                     'Accept': 'application/json',
                 },
-                cache: 'no-store', // Always fetch fresh M&A headlines
+                cache: 'no-store',
             }
         );
 
         if (!res.ok) {
-            console.warn('Yahoo Finance Search API returned status:', res.status);
-            return NextResponse.json({ deals: store.deals }); // Graceful fallback
+            return NextResponse.json({ deals: [] });
         }
 
         const data = await res.json();
@@ -73,7 +66,7 @@ export async function GET() {
             return {
                 id: item.uuid,
                 title: title,
-                parties: item.publisher, // Often the source (e.g. Reuters) or entities if parsed perfectly. We use Publisher as source for safety.
+                parties: item.publisher,
                 value: parseDealValue(combinedText),
                 date: formatYahooDate(item.providerPublishTime),
                 status: determineDealStatus(title),
@@ -83,15 +76,9 @@ export async function GET() {
             };
         });
 
-        if (liveDeals.length === 0) {
-            console.warn('Live deals feed empty. Falling back completely.');
-            return NextResponse.json({ deals: store.deals }); // Graceful fallback if empty
-        }
-
         return NextResponse.json({ deals: liveDeals });
-
     } catch (error) {
         console.error('API /business/deals error:', error);
-        return NextResponse.json({ deals: store.deals }); // Graceful exception fallback
+        return NextResponse.json({ deals: [] });
     }
 }

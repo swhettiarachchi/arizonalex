@@ -3,7 +3,7 @@
 interface UserAvatarProps {
   name?: string;
   avatar?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
   hasStory?: boolean;
   storyViewed?: boolean;
   style?: React.CSSProperties;
@@ -15,6 +15,7 @@ export function UserAvatar({ name = '?', avatar, size = 'md', hasStory = false, 
 
   const getFontSize = () => {
     switch (size) {
+      case 'xs': return '0.55rem';
       case 'sm': return '0.7rem';
       case 'lg': return '1rem';
       case 'xxl': return '1.5rem';

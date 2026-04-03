@@ -12,6 +12,7 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         const saved = localStorage.getItem('arizonalex-theme') as Theme | null;
+        // eslint-disable-next-line
         if (saved) setTheme(saved);
         setMounted(true);
     }, []);

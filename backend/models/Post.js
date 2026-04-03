@@ -5,6 +5,8 @@ const postSchema = new mongoose.Schema(
         author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         content: { type: String, required: [true, 'Post content is required'], maxlength: 5000 },
         type: { type: String, enum: ['text', 'image', 'video', 'thread', 'policy'], default: 'text' },
+        policyTitle: { type: String, default: '' },
+        policyCategory: { type: String, default: '' },
         images: [{ type: String }],
         video: { type: String, default: '' },
         likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -35,5 +37,6 @@ postSchema.pre('save', function (next) {
 postSchema.index({ author: 1, createdAt: -1 });
 postSchema.index({ hashtags: 1 });
 postSchema.index({ createdAt: -1 });
+postSchema.index({ type: 1 });
 
 module.exports = mongoose.model('Post', postSchema);

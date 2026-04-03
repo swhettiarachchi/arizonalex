@@ -4,11 +4,7 @@ import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useAuthGate } from '@/components/providers/AuthGuard';
-import {
-  stories, users, formatNumber,
-  checkUserHasStory, breakingNews, marketData, activeBills,
-  economicIndicators, sectorTrends, polls, events, promises
-} from '@/lib/mock-data';
+import { formatNumber, checkUserHasStory } from '@/lib/utils';
 import {
   ImageIcon, VideoIcon, BarChartIcon, ThreadIcon, FileTextIcon, BotIcon,
   MessageCircleIcon, RepeatIcon, HeartIcon, HeartFilledIcon, BookmarkIcon,
@@ -20,6 +16,7 @@ import {
 } from '@/components/ui/Icons';
 import { PostContent } from '@/components/ui/PostContent';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { PostOptions } from '@/components/ui/PostOptions';
 
 interface UploadedFile { id: string; file: File; preview: string; type: 'image' | 'video'; }
 
@@ -113,7 +110,7 @@ function StoryUploadModal({ onClose }: { onClose: () => void }) {
 }
 
 // ---- MARKET DETAIL MODAL ----
-function MarketModal({ item, onClose }: { item: typeof marketData[0]; onClose: () => void }) {
+function MarketModal({ item, onClose }: { item: any; onClose: () => void }) {
   if (!item) return null;
   return (
     <DetailModal title={item.symbol || 'Loading...'} onClose={onClose}>
@@ -149,7 +146,7 @@ function MarketModal({ item, onClose }: { item: typeof marketData[0]; onClose: (
 
 
 // ---- BILL DETAIL MODAL ----
-function BillModal({ bill, onClose }: { bill: typeof activeBills[0]; onClose: () => void }) {
+function BillModal({ bill, onClose }: { bill: any; onClose: () => void }) {
   const st = BILL_STATUS[bill.status] || { label: bill.status, color: '#94a3b8' };
   const total = bill.forVotes + bill.againstVotes;
   const forPct = total > 0 ? Math.round((bill.forVotes / total) * 100) : 50;
@@ -186,7 +183,7 @@ function BillModal({ bill, onClose }: { bill: typeof activeBills[0]; onClose: ()
 }
 
 // ---- ECON INDICATOR MODAL ----
-function EconIndicatorModal({ item, onClose }: { item: typeof economicIndicators[0]; onClose: () => void }) {
+function EconIndicatorModal({ item, onClose }: { item: any; onClose: () => void }) {
   return (
     <DetailModal title="Economic Indicator" onClose={onClose}>
       <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -217,7 +214,8 @@ function EconIndicatorModal({ item, onClose }: { item: typeof economicIndicators
 }
 
 // ---- NEWS DETAIL MODAL ----
-function NewsModal({ item, onClose }: { item: typeof breakingNews[0]; onClose: () => void }) {
+function NewsModal({ item, onClose }: { item: any; onClose: () => void }) {
+  const newsUrl = item.url || `https://news.google.com/search?q=${encodeURIComponent(item.headline)}`;
   return (
     <DetailModal title="Breaking News" onClose={onClose}>
       <div style={{ marginBottom: 12 }}>
@@ -230,34 +228,45 @@ function NewsModal({ item, onClose }: { item: typeof breakingNews[0]; onClose: (
       </div>
       <p style={{ fontSize: '1rem', fontWeight: 600, lineHeight: 1.6, marginBottom: 16, color: 'var(--text-primary)' }}>{item.headline}</p>
       <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-        This story is developing. Our editorial team is gathering more information and will provide a full analysis shortly.
-        Stay tuned to Arizonalex for live updates on this and other breaking political and business news.
+        This story is developing. Click below to read the full article from the original source.
       </p>
-      <Link href="/explore" className="btn btn-primary" style={{ display: 'block', textAlign: 'center', marginTop: 16 }} onClick={onClose}>
-        Explore Related Stories
-      </Link>
+      <a href={newsUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ display: 'block', textAlign: 'center', marginTop: 16 }} onClick={onClose}>
+        Read Full Story
+      </a>
     </DetailModal>
   );
 }
 
 // ---- LEFT SIDEBAR ----
 function LeftSidebar({ requireAuth }: { requireAuth: (cb: () => void) => void }) {
-  const [selectedBill, setSelectedBill] = useState<typeof activeBills[0] | null>(null);
-  const [selectedEcon, setSelectedEcon] = useState<typeof economicIndicators[0] | null>(null);
-  const [activePoll, setActivePoll] = useState(polls[1]);
+  const [selectedBill, setSelectedBill] = useState<any>(null);
+  const [selectedEcon, setSelectedEcon] = useState<any>(null);
+  const [activePoll, setActivePoll] = useState<any>({ question: 'Loading...', options: [{ label: 'Loading', votes: 0 }], endDate: '' });
   const [voted, setVoted] = useState<number | null>(null);
+  const [leftBills, setLeftBills] = useState<any[]>([]);
+  const [leftEconIndicators, setLeftEconIndicators] = useState<any[]>([]);
+  const [leftEvents, setLeftEvents] = useState<any[]>([]);
+  const [leftPromises, setLeftPromises] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/politics/bills').then(r => r.json()).then(d => { if (d.bills) setLeftBills(d.bills); }).catch(() => { });
+    fetch('/api/politics/stats').then(r => r.json()).then(d => { if (d.economicIndicators) setLeftEconIndicators(d.economicIndicators); }).catch(() => { });
+    fetch('/api/politics/events').then(r => r.json()).then(d => { if (d.events) setLeftEvents(d.events); }).catch(() => { });
+    fetch('/api/politics/promises').then(r => r.json()).then(d => { if (d.promises) setLeftPromises(d.promises); }).catch(() => { });
+    fetch('/api/politics/polls').then(r => r.json()).then(d => { if (d.polls && d.polls.length > 1) setActivePoll(d.polls[1]); else if (d.polls && d.polls.length > 0) setActivePoll(d.polls[0]); }).catch(() => { });
+  }, []);
 
   // Auto-increment live poll votes
   useEffect(() => {
     const interval = setInterval(() => {
-      setActivePoll(prev => {
+      setActivePoll((prev: any) => {
         // Randomly decide which option gets a few new votes
         const optIndexToIncrement = Math.floor(Math.random() * prev.options.length);
         const newVotes = Math.floor(Math.random() * 8) + 1; // 1 to 8 new votes
 
         return {
           ...prev,
-          options: prev.options.map((opt, i) =>
+          options: prev.options.map((opt: any, i: number) =>
             i === optIndexToIncrement ? { ...opt, votes: opt.votes + newVotes } : opt
           )
         };
@@ -267,7 +276,7 @@ function LeftSidebar({ requireAuth }: { requireAuth: (cb: () => void) => void })
     return () => clearInterval(interval);
   }, []);
 
-  const pollTotal = activePoll.options.reduce((s, o) => s + o.votes, 0);
+  const pollTotal = activePoll.options.reduce((s: number, o: any) => s + o.votes, 0);
 
   // Icons for each economic indicator
   const econIcons = [
@@ -285,7 +294,7 @@ function LeftSidebar({ requireAuth }: { requireAuth: (cb: () => void) => void })
       <div className="hp-card">
         <div className="hp-card-title"><ActivityIcon size={15} /> Economic Indicators</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {economicIndicators.slice(0, 4).map((ind, i) => (
+          {leftEconIndicators.slice(0, 4).map((ind, i) => (
             <div key={ind.id} className="econ-tile" onClick={() => setSelectedEcon(ind)} style={{ cursor: 'pointer' }}>
               <div style={{ color: 'var(--primary)', marginBottom: 4 }}>{econIcons[i]}</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', marginBottom: 2, fontWeight: 600 }}>{ind.label}</div>
@@ -303,7 +312,7 @@ function LeftSidebar({ requireAuth }: { requireAuth: (cb: () => void) => void })
       {/* Active Legislation */}
       <div className="hp-card">
         <div className="hp-card-title"><LandmarkIcon size={15} /> Active Legislation</div>
-        {activeBills.slice(0, 3).map(bill => {
+        {leftBills.slice(0, 3).map(bill => {
           const st = BILL_STATUS[bill.status] || { label: bill.status, color: '#94a3b8' };
           const total = bill.forVotes + bill.againstVotes;
           const forPct = total > 0 ? (bill.forVotes / total) * 100 : 50;
@@ -342,7 +351,7 @@ function LeftSidebar({ requireAuth }: { requireAuth: (cb: () => void) => void })
       {/* Upcoming Events */}
       <div className="hp-card">
         <div className="hp-card-title"><CalendarIcon size={15} /> Upcoming Events</div>
-        {events.slice(0, 3).map(ev => (
+        {leftEvents.slice(0, 3).map(ev => (
           <Link key={ev.id} href="/politics" style={{ display: 'flex', gap: 10, marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid var(--border-light)', textDecoration: 'none', color: 'inherit' }}>
             <div style={{ minWidth: 40, textAlign: 'center', background: 'var(--bg-tertiary)', borderRadius: 8, padding: '4px 0', flexShrink: 0 }}>
               <div style={{ fontSize: '0.56rem', color: 'var(--primary)', fontWeight: 700, textTransform: 'uppercase' }}>{ev.date.split(' ')[0]}</div>
@@ -360,7 +369,7 @@ function LeftSidebar({ requireAuth }: { requireAuth: (cb: () => void) => void })
       {/* Promise Tracker */}
       <div className="hp-card">
         <div className="hp-card-title"><CheckCircleIcon size={15} /> Promise Tracker</div>
-        {promises.slice(0, 4).map(p => {
+        {leftPromises.slice(0, 4).map(p => {
           const st = PROMISE_STATUS[p.status];
           return (
             <Link key={p.id} href="/politics" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10, textDecoration: 'none', color: 'inherit' }}>
@@ -381,7 +390,7 @@ function LeftSidebar({ requireAuth }: { requireAuth: (cb: () => void) => void })
       <div className="hp-card">
         <div className="hp-card-title"><BarChartIcon size={15} /> Live Poll</div>
         <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10, lineHeight: 1.4 }}>{activePoll.question}</div>
-        {activePoll.options.map((opt, i) => {
+        {activePoll.options.map((opt: any, i: number) => {
           const pct = Math.round((opt.votes / pollTotal) * 100);
           const isVoted = voted === i;
           return (
@@ -417,7 +426,13 @@ function RightPanel({ requireAuth }: { requireAuth: (cb: () => void) => void }) 
     { label: 'Neutral', pct: 24, color: '#f59e0b', Icon: ActivityIcon },
     { label: 'Bearish', pct: 18, color: '#ef4444', Icon: TrendingDownIcon }
   ]);
-  const [liveTrends, setLiveTrends] = useState(sectorTrends);
+  const [liveTrends, setLiveTrends] = useState<any[]>([]);
+  const [rightUsers, setRightUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/politics/stats').then(r => r.json()).then(d => { if (d.sectorTrends) setLiveTrends(d.sectorTrends); }).catch(() => { });
+    fetch('/api/users?limit=4').then(r => r.json()).then(d => { if (d.users) setRightUsers(d.users); }).catch(() => { });
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -512,7 +527,7 @@ function RightPanel({ requireAuth }: { requireAuth: (cb: () => void) => void }) 
         <h3 className="section-title" style={{ marginBottom: 12, fontSize: '0.93rem', display: 'flex', alignItems: 'center', gap: 6 }}>
           <UsersIcon size={15} /> Who to Follow
         </h3>
-        {users.slice(0, 4).map(user => (
+        {rightUsers.slice(0, 4).map(user => (
           <div key={user.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border-light)' }}>
             <Link href={`/profile/${user.username}`}><UserAvatar name={user.name} avatar={user.avatar} size="sm" hasStory={checkUserHasStory(user.id)} /></Link>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -534,10 +549,10 @@ function RightPanel({ requireAuth }: { requireAuth: (cb: () => void) => void }) 
 // MAIN PAGE
 // ====================================================
 export default function HomePage() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user: currentUser } = useAuth();
   const { requireAuth } = useAuthGate();
   const [activeTab, setActiveTab] = useState('foryou');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const [feedPosts, setFeedPosts] = useState<any[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [composeText, setComposeText] = useState('');
@@ -546,13 +561,35 @@ export default function HomePage() {
   const [postStatus, setPostStatus] = useState<'idle' | 'posting' | 'posted'>('idle');
   const [showPoll, setShowPoll] = useState(false);
   const [showThread, setShowThread] = useState(false);
+  const [showPolicy, setShowPolicy] = useState(false);
+  const [policyTitle, setPolicyTitle] = useState('');
+  const [policyCategory, setPolicyCategory] = useState('Economy');
   const [pollData, setPollData] = useState({ question: '', options: ['', ''], duration: '1 day' });
   const [threadPosts, setThreadPosts] = useState<string[]>([]);
   const [isAILoading, setIsAILoading] = useState(false);
-  const [selectedMarket, setSelectedMarket] = useState<typeof marketData[0] | null>(null);
-  const [selectedNews, setSelectedNews] = useState<typeof breakingNews[0] | null>(null);
-  const [liveMarketData, setLiveMarketData] = useState<typeof marketData>(marketData);
+  const [showTagPicker, setShowTagPicker] = useState(false);
+  const [customTagInput, setCustomTagInput] = useState('');
+  const [selectedMarket, setSelectedMarket] = useState<any>(null);
+  const [selectedNews, setSelectedNews] = useState<any>(null);
+  const [liveMarketData, setLiveMarketData] = useState<any[]>([]);
+  const [liveBreakingNews, setLiveBreakingNews] = useState<any[]>([]);
+  const [storyList, setStoryList] = useState<any[]>([]);
   const composeFileRef = useRef<HTMLInputElement>(null);
+
+  // Fetch stories
+  useEffect(() => {
+    fetch('/api/stories')
+      .then(r => r.json())
+      .then(data => { if (data.stories) setStoryList(data.stories); })
+      .catch(() => {
+        setStoryList([
+          { id: 's1', author: { name: 'Sarah Chen', avatar: '', id: 'u1' }, viewed: false },
+          { id: 's2', author: { name: 'James Wilson', avatar: '', id: 'u2' }, viewed: true },
+          { id: 's3', author: { name: 'Maria Garcia', avatar: '', id: 'u3' }, viewed: false },
+          { id: 's4', author: { name: 'David Kim', avatar: '', id: 'u4' }, viewed: true },
+        ]);
+      });
+  }, []);
 
   const fetchMarketData = useCallback(() => {
     fetch('/api/market-data')
@@ -563,10 +600,35 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchMarketData();
-    // Refresh market data every 30 seconds
     const interval = setInterval(fetchMarketData, 30000);
     return () => clearInterval(interval);
   }, [fetchMarketData]);
+
+  // Fetch live breaking news from /api/news
+  const fetchBreakingNews = useCallback(() => {
+    fetch('/api/news')
+      .then(r => r.json())
+      .then(data => {
+        if (data.articles && data.articles.length > 0) {
+          const mapped = data.articles.slice(0, 8).map((a: any, i: number) => ({
+            id: a.id || `live-${i}`,
+            headline: a.title,
+            category: a.topic || a.category || 'World',
+            urgency: a.urgencyLevel === 'breaking' ? 'high' : a.urgencyLevel === 'developing' ? 'medium' : 'low',
+            time: a.timeAgo || 'Just now',
+            url: a.url,
+          }));
+          setLiveBreakingNews(mapped);
+        }
+      })
+      .catch(() => { /* keep current data */ });
+  }, []);
+
+  useEffect(() => {
+    fetchBreakingNews();
+    const newsInterval = setInterval(fetchBreakingNews, 300000); // Refresh every 5 min
+    return () => clearInterval(newsInterval);
+  }, [fetchBreakingNews]);
 
   const fetchPosts = useCallback(() => {
     setPostsLoading(true);
@@ -577,6 +639,7 @@ export default function HomePage() {
       .finally(() => setPostsLoading(false));
   }, [activeTab]);
 
+  // eslint-disable-next-line
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
 
   const toggleLike = (id: string) => requireAuth(async () => {
@@ -611,10 +674,11 @@ export default function HomePage() {
     if (!composeText.trim() && composeFiles.length === 0) return;
     setPostStatus('posting');
     try {
+      const type = showPolicy ? 'policy' : showThread ? 'thread' : 'text';
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: composeText, type: 'text' }),
+        body: JSON.stringify({ content: composeText, type, policyTitle: showPolicy ? policyTitle : undefined, policyCategory: showPolicy ? policyCategory : undefined }),
       });
       const data = await res.json();
       if (data.post) {
@@ -622,8 +686,9 @@ export default function HomePage() {
       }
       setPostStatus('posted');
       setTimeout(() => {
-        setComposeText(''); setComposeFiles([]); setShowPoll(false); setShowThread(false);
+        setComposeText(''); setComposeFiles([]); setShowPoll(false); setShowThread(false); setShowPolicy(false);
         setThreadPosts([]); setPollData({ question: '', options: ['', ''], duration: '1 day' });
+        setPolicyTitle(''); setPolicyCategory('Economy');
         setPostStatus('idle');
       }, 1500);
     } catch {
@@ -631,10 +696,21 @@ export default function HomePage() {
     }
   };
 
-  const handleAIAssist = () => {
+  const handleAIAssist = async () => {
     if (!composeText.trim()) return;
     setIsAILoading(true);
-    setTimeout(() => { setComposeText(composeText + ' #PolicyInsight #Arizonalex'); setIsAILoading(false); }, 1200);
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toolId: 'post', input: `Enhance and improve this social media post. Make it more engaging, professional, and add relevant hashtags. Keep it concise. Original: "${composeText}"` }),
+      });
+      const data = await res.json();
+      if (data.success && data.output) {
+        setComposeText(data.output.trim());
+      }
+    } catch { /* silently fail */ }
+    setIsAILoading(false);
   };
 
   const tabs = [
@@ -648,14 +724,6 @@ export default function HomePage() {
 
   const displayPosts = feedPosts;
 
-  // AI insight tiles config (no emojis)
-  const aiTiles = [
-    { icon: <LandmarkIcon size={16} />, label: 'Legislative Activity', value: '12 Bills Active', sub: '3 heading to floor vote', href: '/politics' },
-    { icon: <TrendingUpIcon size={16} />, label: 'Market Pulse', value: 'Risk-On Sentiment', sub: 'S&P up 1.24% today', href: '/business' },
-    { icon: <ShieldIcon size={16} />, label: 'Policy Impact', value: 'High Volatility', sub: 'Capital Gains bill key risk', href: '/explore' },
-    { icon: <GlobeIcon size={16} />, label: 'Global Signals', value: 'Trade Deal Optimism', sub: 'USD weakening vs EUR', href: '/explore' },
-  ];
-
   return (
     <div className="page-container home-3col">
       {/* LEFT */}
@@ -664,92 +732,78 @@ export default function HomePage() {
       {/* CENTER */}
       <div className="feed-column" style={{ minWidth: 0 }}>
 
-        {/* Breaking News Ticker */}
-        <div className="news-ticker-wrap">
-          <div className="news-ticker-label"><NewspaperIcon size={11} /> LIVE</div>
-          <div className="news-ticker-track">
-            <div className="news-ticker-inner">
-              {[...breakingNews, ...breakingNews].map((n, i) => (
-                <button key={i} className="news-ticker-item" onClick={() => setSelectedNews(n)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: '0 20px', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <span className={`ticker-cat ticker-cat-${n.urgency}`}>{n.category}</span>
-                  {n.headline}
-                  <span className="ticker-time">{n.time}</span>
-                  <span className="ticker-sep">•</span>
-                </button>
+        <div className="prof-tile" style={{ marginBottom: 16 }}>
+          {/* Breaking News Ticker */}
+          <div className="news-ticker-wrap" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="news-ticker-label"><NewspaperIcon size={11} /> LIVE</div>
+            <div className="news-ticker-track">
+              <div className="news-ticker-inner">
+                {[...liveBreakingNews, ...liveBreakingNews].map((n, i) => {
+                  const newsUrl = n.url || `https://news.google.com/search?q=${encodeURIComponent(n.headline)}`;
+                  return (
+                    <a key={i} className="news-ticker-item" href={newsUrl} target="_blank" rel="noopener noreferrer"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: '0 20px', display: 'inline-flex', alignItems: 'center', gap: 8, color: 'inherit', textDecoration: 'none' }}>
+                      <span className={`ticker-cat ticker-cat-${n.urgency}`}>{n.category}</span>
+                      {n.headline}
+                      <span className="ticker-time">{n.time}</span>
+                      <span className="ticker-sep">•</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Market Data Bar */}
+          <div style={{ background: 'var(--bg-secondary)', padding: '10px 16px', display: 'flex', gap: 10, alignItems: 'center', overflowX: 'hidden' }}>
+            <span style={{ fontSize: '0.62rem', fontWeight: 800, whiteSpace: 'nowrap', background: 'var(--text-primary)', color: 'var(--bg-primary)', padding: '2px 8px', borderRadius: 4, letterSpacing: '0.06em' }}>MARKETS</span>
+            <div className="ticker-scroll" style={{ display: 'flex', gap: 24, overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+              {liveMarketData?.map(m => (
+                <span key={m?.id} style={{ whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', gap: 6, alignItems: 'center' }}
+                  onClick={() => setSelectedMarket(m)}>
+                  <span style={{ fontWeight: 700 }}>{m?.symbol || '--'}</span>
+                  <span>{m?.price || '--'}</span>
+                  <span style={{ color: m?.positive ? '#10b981' : '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {m?.positive ? <ArrowUpRightIcon size={12} /> : <ArrowDownRightIcon size={12} />}
+                    {m?.change || '--'}
+                  </span>
+                </span>
               ))}
             </div>
           </div>
         </div>
-
-        {/* Market Data Bar */}
-        <div style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 10, alignItems: 'center', overflowX: 'hidden' }}>
-          <span style={{ fontSize: '0.62rem', fontWeight: 800, whiteSpace: 'nowrap', background: 'var(--text-primary)', color: 'var(--bg-primary)', padding: '2px 8px', borderRadius: 4, letterSpacing: '0.06em' }}>MARKETS</span>
-          <div className="ticker-scroll" style={{ display: 'flex', gap: 24, overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
-            {liveMarketData?.map(m => (
-              <span key={m?.id} style={{ whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', gap: 6, alignItems: 'center' }}
-                onClick={() => setSelectedMarket(m)}>
-                <span style={{ fontWeight: 700 }}>{m?.symbol || '--'}</span>
-                <span>{m?.price || '--'}</span>
-                <span style={{ color: m?.positive ? '#10b981' : '#ef4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2 }}>
-                  {m?.positive ? <ArrowUpRightIcon size={12} /> : <ArrowDownRightIcon size={12} />}
-                  {m?.change || '--'}
-                </span>
-              </span>
+        <div className="prof-tile" style={{ marginBottom: 16 }}>
+          {/* Tabs */}
+          <div className="tabs" style={{ overflowX: 'auto', flexWrap: 'nowrap', borderBottom: '1px solid var(--border)' }}>
+            {tabs.map(tab => (
+              <button key={tab.id} className={`tab ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}
+                style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
+                {tab.icon}{tab.label}
+              </button>
             ))}
           </div>
-        </div>
-        {/* Tabs */}
-        <div className="tabs" style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
-          {tabs.map(tab => (
-            <button key={tab.id} className={`tab ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}
-              style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
-              {tab.icon}{tab.label}
-            </button>
-          ))}
-        </div>
 
-        {/* Story Bar */}
-        <div className="story-bar">
-          <div className="story-item" onClick={() => requireAuth(() => setShowStoryModal(true))} style={{ cursor: 'pointer' }}>
-            <div style={{ position: 'relative' }}>
-              <UserAvatar name="Alex Jordan" avatar="/avatars/alex-jordan.png" size="lg" hasStory storyViewed />
-              <div className="story-plus-overlay"><PlusIcon size={12} /></div>
+          {/* Story Bar */}
+          <div className="story-bar" style={{ borderBottom: 'none' }}>
+            <div className="story-item" onClick={() => requireAuth(() => setShowStoryModal(true))} style={{ cursor: 'pointer' }}>
+              <div style={{ position: 'relative' }}>
+                <UserAvatar name="Alex Jordan" avatar="/avatars/alex-jordan.png" size="lg" hasStory storyViewed />
+                <div className="story-plus-overlay"><PlusIcon size={12} /></div>
+              </div>
+              <span className="story-name">Your Story</span>
             </div>
-            <span className="story-name">Your Story</span>
-          </div>
-          {stories.map(story => (
-            <div key={story.id} className="story-item" style={{ cursor: 'pointer' }}>
-              <UserAvatar name={story.author.name} avatar={story.author.avatar} size="lg" hasStory storyViewed={story.viewed} />
-              <span className="story-name">{story.author.name.split(' ')[0]}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* AI Insights Card */}
-        <div className="ai-insights-card" role="region" aria-label="AI Policy & Market Intelligence">
-          <div className="ai-insights-header">
-            <div className="ai-insights-badge">
-              <CpuIcon size={10} /> AI ANALYSIS
-            </div>
-            <span className="ai-insights-title">Today&apos;s Policy &amp; Market Intelligence</span>
-            <span className="ai-insights-time"><ClockIcon size={10} /> 5 min ago</span>
-          </div>
-          <div className="ai-insights-grid">
-            {aiTiles.map(tile => (
-              <Link href={tile.href} key={tile.label} className="ai-insight-tile" style={{ textDecoration: 'none' }}>
-                <div className="ai-tile-icon">{tile.icon}</div>
-                <div className="ai-tile-label">{tile.label}</div>
-                <div className="ai-tile-value">{tile.value}</div>
-                <div className="ai-tile-sub">{tile.sub}</div>
-              </Link>
+            {storyList.map(story => (
+              <div key={story.id} className="story-item" style={{ cursor: 'pointer' }}>
+                <UserAvatar name={story.author.name} avatar={story.author.avatar} size="lg" hasStory storyViewed={story.viewed} />
+                <span className="story-name">{story.author.name.split(' ')[0]}</span>
+              </div>
             ))}
           </div>
         </div>
 
         {/* Compose / Guest CTA */}
         {isLoggedIn ? (
-          <div className="compose-box">
+          <div className="compose-box prof-tile" style={{ marginBottom: 16, border: 'none' }}>
             <UserAvatar name="Alex Jordan" avatar="/avatars/alex-jordan.png" />
             <div className="compose-input">
               <textarea className="compose-textarea" placeholder="Share a policy insight, market analysis, or breaking news..." value={composeText} onChange={e => setComposeText(e.target.value)} />
@@ -760,7 +814,7 @@ export default function HomePage() {
                     <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Create Poll</span>
                     <button className="btn btn-icon btn-sm" onClick={() => setShowPoll(false)}><XIcon size={14} /></button>
                   </div>
-                  {pollData.options.map((opt, idx) => (
+                  {pollData.options.map((opt: string, idx: number) => (
                     <div key={idx} style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                       <input className="edit-field-input" style={{ padding: '8px 12px', fontSize: '0.85rem' }} placeholder={`Option ${idx + 1}`} value={opt}
                         onChange={e => { const o = [...pollData.options]; o[idx] = e.target.value; setPollData(p => ({ ...p, options: o })); }} />
@@ -790,6 +844,68 @@ export default function HomePage() {
                 </div>
               )}
 
+              {showPolicy && (
+                <div className="card" style={{ padding: 12, marginBottom: 10, border: '1px solid var(--primary-light)', borderRadius: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>Policy Proposal</span>
+                    </div>
+                    <button className="btn btn-icon btn-sm" onClick={() => setShowPolicy(false)}><XIcon size={14} /></button>
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
+                    <label style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-tertiary)', display: 'block', marginBottom: 4 }}>Title</label>
+                    <input className="form-input" style={{ padding: '8px 12px', fontSize: '0.85rem', borderRadius: 8, width: '100%' }} placeholder="e.g., Digital Privacy Protection Act 2026" value={policyTitle} onChange={e => setPolicyTitle(e.target.value)} />
+                  </div>
+                  <div style={{ marginBottom: 6 }}>
+                    <label style={{ fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-tertiary)', display: 'block', marginBottom: 4 }}>Category</label>
+                    <input className="form-input" list="policy-categories-home" style={{ padding: '8px 12px', fontSize: '0.82rem', borderRadius: 8, width: '100%' }} placeholder="Select category..." value={policyCategory} onChange={e => setPolicyCategory(e.target.value)} />
+                    <datalist id="policy-categories-home">
+                      <option value="Healthcare" /><option value="Education" /><option value="Economy" />
+                      <option value="Environment" /><option value="Infrastructure" /><option value="National Security" />
+                      <option value="Technology" /><option value="Foreign Policy" /><option value="Civil Rights" />
+                      <option value="Transportation" /><option value="Housing" /><option value="Web3/Crypto" />
+                      <option value="Energy" /><option value="Labor" /><option value="Immigration" /><option value="Trade" />
+                    </datalist>
+                  </div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', marginTop: 6 }}>Write the proposal body in the text area above.</div>
+                </div>
+              )}
+
+              {showTagPicker && (
+                <div className="card" style={{ padding: 12, marginBottom: 10, border: '1px solid var(--primary-light)', animation: 'fade-in 0.15s ease-out' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                      Insert Tag
+                    </span>
+                    <button className="btn btn-icon btn-sm" onClick={() => setShowTagPicker(false)}><XIcon size={14} /></button>
+                  </div>
+
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Status</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                    {['DONE', 'IN PROGRESS', 'PENDING', 'APPROVED', 'REJECTED', 'REVIEW'].map(tag => (
+                      <button key={tag} className="btn btn-sm" style={{ padding: '4px 10px', fontSize: '0.72rem', fontWeight: 700, borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg-secondary)', cursor: 'pointer' }}
+                        onClick={() => { setComposeText(prev => prev + `[${tag}] `); setShowTagPicker(false); }}>{tag}</button>
+                    ))}
+                  </div>
+
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Domain</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                    {['LEGISLATION', 'RESEARCH', 'INFRASTRUCTURE', 'EDUCATION', 'BREAKING', 'POLICY', 'ECONOMY', 'SECURITY', 'HEALTH', 'TECHNOLOGY', 'CLIMATE', 'TRADE', 'ALERT', 'UPDATE', 'ANNOUNCEMENT'].map(tag => (
+                      <button key={tag} className="btn btn-sm" style={{ padding: '4px 10px', fontSize: '0.72rem', fontWeight: 700, borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg-secondary)', cursor: 'pointer' }}
+                        onClick={() => { setComposeText(prev => prev + `[${tag}] `); setShowTagPicker(false); }}>{tag}</button>
+                    ))}
+                  </div>
+
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Custom Tag</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input className="form-input" style={{ padding: '6px 12px', fontSize: '0.82rem', flex: 1 }} placeholder="Type your own tag..." value={customTagInput} onChange={e => setCustomTagInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && customTagInput.trim()) { setComposeText(prev => prev + `[${customTagInput.trim().toUpperCase()}] `); setCustomTagInput(''); setShowTagPicker(false); } }} />
+                    <button className="btn btn-primary btn-sm" style={{ borderRadius: 20, padding: '6px 14px', fontSize: '0.78rem', fontWeight: 700 }} disabled={!customTagInput.trim()} onClick={() => { setComposeText(prev => prev + `[${customTagInput.trim().toUpperCase()}] `); setCustomTagInput(''); setShowTagPicker(false); }}>Add</button>
+                  </div>
+                </div>
+              )}
+
               {composeFiles.length > 0 && (
                 <div className="upload-preview-grid" style={{ marginBottom: 10 }}>
                   {composeFiles.map(f => (
@@ -808,7 +924,10 @@ export default function HomePage() {
                   <button className="compose-tool" title="Video" onClick={() => { if (composeFileRef.current) { composeFileRef.current.accept = 'video/*'; composeFileRef.current.click(); } }}><VideoIcon size={18} /></button>
                   <button className={`compose-tool ${showPoll ? 'active' : ''}`} title="Poll" onClick={() => setShowPoll(!showPoll)}><BarChartIcon size={18} /></button>
                   <button className={`compose-tool ${showThread ? 'active' : ''}`} title="Thread" onClick={() => { if (!showThread && threadPosts.length === 0) setThreadPosts(['']); setShowThread(!showThread); }}><ThreadIcon size={18} /></button>
-                  <button className="compose-tool" title="Policy Proposal"><FileTextIcon size={18} /></button>
+                  <button className={`compose-tool ${showPolicy ? 'active' : ''}`} title="Policy Proposal" onClick={() => setShowPolicy(!showPolicy)}><FileTextIcon size={18} /></button>
+                  <button className={`compose-tool ${showTagPicker ? 'active' : ''}`} title="Insert Tag" onClick={() => setShowTagPicker(!showTagPicker)}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                  </button>
                   <button className={`compose-tool ${isAILoading ? 'ai-loading' : ''}`} title="AI Assist" onClick={handleAIAssist} disabled={isAILoading || !composeText.trim()}><BotIcon size={18} /></button>
                 </div>
                 <button className="btn btn-primary btn-sm" disabled={!composeText.trim() && composeFiles.length === 0 || postStatus !== 'idle'} onClick={handlePost} style={{ minWidth: 70 }}>
@@ -819,7 +938,7 @@ export default function HomePage() {
             </div>
           </div>
         ) : (
-          <div className="guest-cta-card" onClick={() => requireAuth(() => { })}>
+          <div className="guest-cta-card" onClick={() => requireAuth(() => { })} style={{ marginBottom: 16 }}>
             <div className="guest-cta-glow" />
             <div className="guest-cta-content">
               <div className="guest-cta-left">
@@ -844,48 +963,64 @@ export default function HomePage() {
             <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>Loading posts...</div>
           )}
           {displayPosts.map(post => (
-            <article key={post.id} className="post-card fade-in">
-              <div className="post-header">
-                <Link href={`/profile/${post.author.username}`}><UserAvatar name={post.author.name} avatar={post.author.avatar} hasStory={checkUserHasStory(post.author.id)} /></Link>
-                <div className="post-meta">
-                  <div className="post-author-row">
-                    <Link href={`/profile/${post.author.username}`} className="post-author">{post.author.name}</Link>
-                    {post.author.verified && <VerifiedIcon size={15} />}
-                    <Link href={`/profile/${post.author.username}`} className="post-handle">@{post.author.username}</Link>
-                    <span className="post-time">{post.timestamp}</span>
+            <div key={post.id} className="prof-tile" style={{ marginBottom: 16 }}>
+              <article className="post-card fade-in">
+                <div className="post-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <Link href={`/profile/${post.author.username}`}><UserAvatar name={post.author.name} avatar={post.author.avatar} hasStory={checkUserHasStory(post.author.id)} /></Link>
+                    <div className="post-meta">
+                      <div className="post-author-row">
+                        <Link href={`/profile/${post.author.username}`} className="post-author">{post.author.name}</Link>
+                        {post.author.verified && <VerifiedIcon size={15} />}
+                        <Link href={`/profile/${post.author.username}`} className="post-handle">@{post.author.username}</Link>
+                        <span className="post-time">{post.timestamp}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
+                        <span className={`role-badge role-${post.author.role}`}>{ROLE_LABELS[post.author.role] ?? post.author.role}</span>
+                        {post.author.party && <span className="role-badge role-politician">{post.author.party}</span>}
+                        {post.type === 'policy' && <span className="post-type-badge badge-policy"><FileTextIcon size={11} /> Policy</span>}
+                        {post.type === 'thread' && <span className="post-type-badge badge-thread"><ThreadIcon size={11} /> Thread</span>}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
-                    <span className={`role-badge role-${post.author.role}`}>{ROLE_LABELS[post.author.role] ?? post.author.role}</span>
-                    {post.author.party && <span className="role-badge role-politician">{post.author.party}</span>}
-                    {post.type === 'policy' && <span className="post-type-badge badge-policy"><FileTextIcon size={11} /> Policy</span>}
-                    {post.type === 'thread' && <span className="post-type-badge badge-thread"><ThreadIcon size={11} /> Thread</span>}
-                  </div>
+                  
+                  {/* Universal Post Options Overlay */}
+                  <PostOptions 
+                    postId={post.id}
+                    authorUsername={post.author.username}
+                    currentUsername={currentUser?.username}
+                    initialContent={post.content}
+                    isPolicy={post.type === 'policy'}
+                    initialPolicyTitle={post.policyTitle}
+                    onDelete={(id: string) => setFeedPosts(prev => prev.filter(p => p.id !== id))}
+                    onUpdate={(id: string, newContent: string) => setFeedPosts(prev => prev.map(p => p.id === id ? { ...p, content: newContent } : p))}
+                  />
                 </div>
-              </div>
-              <PostContent content={post.content} />
-              <div className="post-actions">
-                <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''}`} onClick={() => requireAuth(() => { })}>
-                  <span className="action-icon"><MessageCircleIcon size={17} /></span><span>{formatNumber(post.comments)}</span>
-                </button>
-                <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''}`} onClick={async () => requireAuth(async () => {
-                  const res = await fetch(`/api/posts/${post.id}/repost`, { method: 'POST' });
-                  const data = await res.json();
-                  if (data.post) setFeedPosts(prev => prev.map(p => p.id === post.id ? { ...p, reposts: data.post.reposts, reposted: data.post.reposted } : p));
-                })}>
-                  <span className="action-icon"><RepeatIcon size={17} /></span><span>{formatNumber(post.reposts)}</span>
-                </button>
-                <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''} ${post.liked ? 'liked' : ''}`} onClick={() => toggleLike(post.id)}>
-                  <span className="action-icon">{post.liked ? <HeartFilledIcon size={17} /> : <HeartIcon size={17} />}</span>
-                  <span>{formatNumber(post.likes)}</span>
-                </button>
-                <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''} ${post.bookmarked ? 'bookmarked' : ''}`} onClick={() => toggleSave(post.id)}>
-                  <span className="action-icon"><BookmarkIcon size={17} /></span>
-                </button>
-                <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''}`} onClick={() => requireAuth(() => { })}>
-                  <span className="action-icon"><ShareIcon size={17} /></span>
-                </button>
-              </div>
-            </article>
+                <PostContent content={post.content} type={post.type} policyTitle={post.policyTitle} policyCategory={post.policyCategory} />
+                <div className="post-actions">
+                  <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''}`} onClick={() => requireAuth(() => { })}>
+                    <span className="action-icon"><MessageCircleIcon size={17} /></span><span>{formatNumber(post.comments)}</span>
+                  </button>
+                  <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''}`} onClick={async () => requireAuth(async () => {
+                    const res = await fetch(`/api/posts/${post.id}/repost`, { method: 'POST' });
+                    const data = await res.json();
+                    if (data.post) setFeedPosts(prev => prev.map(p => p.id === post.id ? { ...p, reposts: data.post.reposts, reposted: data.post.reposted } : p));
+                  })}>
+                    <span className="action-icon"><RepeatIcon size={17} /></span><span>{formatNumber(post.reposts)}</span>
+                  </button>
+                  <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''} ${post.liked ? 'liked' : ''}`} onClick={() => toggleLike(post.id)}>
+                    <span className="action-icon">{post.liked ? <HeartFilledIcon size={17} /> : <HeartIcon size={17} />}</span>
+                    <span>{formatNumber(post.likes)}</span>
+                  </button>
+                  <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''} ${post.bookmarked ? 'bookmarked' : ''}`} onClick={() => toggleSave(post.id)}>
+                    <span className="action-icon"><BookmarkIcon size={17} /></span>
+                  </button>
+                  <button className={`post-action ${!isLoggedIn ? 'action-locked' : ''}`} onClick={() => requireAuth(() => { })}>
+                    <span className="action-icon"><ShareIcon size={17} /></span>
+                  </button>
+                </div>
+              </article>
+            </div>
           ))}
         </div>
       </div>

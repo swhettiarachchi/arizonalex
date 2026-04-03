@@ -8,9 +8,7 @@ import {
     UsersIcon, FileTextIcon, ArrowUpRightIcon, ArrowDownRightIcon, ChevronRightIcon,
     SearchIcon, ScaleIcon, BuildingIcon, ShieldIcon, FlameIcon, XIcon
 } from '@/components/ui/Icons';
-import {
-    formatNumber
-} from '@/lib/mock-data';
+import { formatNumber } from '@/lib/utils';
 import { useAuthGate } from '@/components/providers/AuthGuard';
 
 const TABS = [
@@ -43,9 +41,20 @@ export default function BusinessPage() {
     const [activeTab, setActiveTab] = useState('overview');
     const [searchQuery, setSearchQuery] = useState('');
 
-    // API Data State
-    const [marketStats, setMarketStats] = useState<any[]>([]);
-    const [liveMarketData, setLiveMarketData] = useState<any[]>([]);
+    // Static Data State
+    const marketStats = [
+        { label: 'S&P 500', val: '5,234.18', change: '+1.2%', up: true },
+        { label: 'NASDAQ', val: '16,399.52', change: '+1.5%', up: true },
+        { label: 'DOW JONES', val: '39,475.90', change: '+0.8%', up: true },
+        { label: 'US 10Y', val: '4.21%', change: '-0.05', up: false }
+    ];
+    const liveMarketData = [
+        { id: 'aapl', symbol: 'AAPL', name: 'Apple Inc.', price: 173.50, change: 1.2, current_price: 173.50, price_change_percentage_24h: 1.2 },
+        { id: 'msft', symbol: 'MSFT', name: 'Microsoft Corp.', price: 425.22, change: 0.8, current_price: 425.22, price_change_percentage_24h: 0.8 },
+        { id: 'nvda', symbol: 'NVDA', name: 'NVIDIA Corp.', price: 895.14, change: 3.4, current_price: 895.14, price_change_percentage_24h: 3.4 },
+        { id: 'tsla', symbol: 'TSLA', name: 'Tesla Inc.', price: 175.34, change: -1.5, current_price: 175.34, price_change_percentage_24h: -1.5 },
+        { id: 'amzn', symbol: 'AMZN', name: 'Amazon.com', price: 178.22, change: 0.5, current_price: 178.22, price_change_percentage_24h: 0.5 }
+    ];
     const [sectors, setSectors] = useState<any[]>([]);
     const [econIndicators, setEconIndicators] = useState<any[]>([]);
     const [news, setNews] = useState<any[]>([]);
@@ -54,6 +63,39 @@ export default function BusinessPage() {
     const [events, setEvents] = useState<any[]>([]);
     const [pollsList, setPollsList] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [newsIsLive, setNewsIsLive] = useState(false);
+
+    // Fetch all business data from APIs
+    useEffect(() => {
+        fetch('/api/business/companies').then(r => r.json()).then(d => { if (d.companies) setCompaniesList(d.companies); }).catch(() => { });
+        fetch('/api/business/deals').then(r => r.json()).then(d => { if (d.deals) setDealsList(d.deals); }).catch(() => { });
+        fetch('/api/business/sectors').then(r => r.json()).then(d => { if (d.sectors) setSectors(d.sectors); }).catch(() => { });
+        fetch('/api/business/stats').then(r => r.json()).then(d => { if (d.economicIndicators) setEconIndicators(d.economicIndicators); }).catch(() => { });
+        fetch('/api/business/events').then(r => r.json()).then(d => { if (d.events) setEvents(d.events); }).catch(() => { });
+        fetch('/api/business/polls').then(r => r.json()).then(d => { if (d.polls) setPollsList(d.polls); }).catch(() => { });
+    }, []);
+
+    const fetchBusinessData = useCallback(async () => {
+        try {
+            const res = await fetch('/api/business/news');
+            if (res.ok) {
+                const data = await res.json();
+                setNews(data.news || []);
+                setNewsIsLive(data.isLive === true);
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchBusinessData();
+        const int = setInterval(fetchBusinessData, 60000); // 60s background poll
+        return () => clearInterval(int);
+    }, [fetchBusinessData]);
+
     const [selectedNews, setSelectedNews] = useState<any>(null);
     const [selectedMarket, setSelectedMarket] = useState<any>(null);
     const [selectedEcon, setSelectedEcon] = useState<any>(null);
@@ -71,19 +113,31 @@ export default function BusinessPage() {
         setTimeout(() => setToast(null), 4000);
     });
 
-    const handleAIAnalysis = (deal: any) => requireAuth(() => {
+    const handleAIAnalysis = (deal: any) => requireAuth(async () => {
         setAnalyzingDeal(deal);
         setIsAnalyzing(true);
         setAnalysisResult(null);
-
-        setTimeout(() => {
-            setAnalysisResult({
-                rationale: `The ${deal.type.toLowerCase()} between ${deal.parties} represents a strategic consolidation within the ${deal.sector} sector. This move primarily aims to secure market share and leverage combined technological assets against emerging competitors.`,
-                financials: `Valued at ${deal.value ?? 'an undisclosed amount'}, the transaction proposes significant synergies. However, integration costs and potential short-term debt structuring remain key risk factors that analysts are closely monitoring.`,
-                regulatory: `Given the scale, antitrust scrutiny is highly probable. The FTC has actively monitored the ${deal.sector} space, and divestitures may be required before final approval is granted.`
+        try {
+            const res = await fetch('/api/ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ toolId: 'market', input: `Analyze this deal:\nTitle: ${deal.title}\nType: ${deal.type}\nParties: ${deal.parties}\nValue: ${deal.value}\nSector: ${deal.sector}\nStatus: ${deal.status}\n\nProvide analysis in exactly 3 sections: 1) STRATEGIC RATIONALE 2) FINANCIAL OUTLOOK 3) REGULATORY ENVIRONMENT. Keep each section to 2-3 sentences.` }),
             });
-            setIsAnalyzing(false);
-        }, 2500);
+            const data = await res.json();
+            if (data.success && data.output) {
+                const sections = data.output.split(/\d+\)\s*|#{1,3}\s*/i).filter(Boolean);
+                setAnalysisResult({
+                    rationale: sections[0]?.replace(/strategic rationale:?/i, '').trim() || data.output.substring(0, data.output.length / 3),
+                    financials: sections[1]?.replace(/financial outlook:?/i, '').trim() || data.output.substring(data.output.length / 3, (data.output.length / 3) * 2),
+                    regulatory: sections[2]?.replace(/regulatory environment:?/i, '').trim() || data.output.substring((data.output.length / 3) * 2),
+                });
+            } else {
+                setAnalysisResult({ rationale: 'Analysis unavailable. Please try again.', financials: '', regulatory: '' });
+            }
+        } catch {
+            setAnalysisResult({ rationale: 'Failed to connect to AI service. Please try again.', financials: '', regulatory: '' });
+        }
+        setIsAnalyzing(false);
     });
 
     // --- Interactive Company Tracker State ---
@@ -98,20 +152,31 @@ export default function BusinessPage() {
         setTimeout(() => setToast(null), 4000);
     });
 
-    const handleCompanyAnalysis = (company: any) => requireAuth(() => {
+    const handleCompanyAnalysis = (company: any) => requireAuth(async () => {
         setAnalyzingCompany(company);
         setIsAnalyzingCompany(true);
         setCompanyAnalysisResult(null);
-
-        // Simulate a 3rd party AI API request (e.g. OpenAI/Gemini building the company financial model)
-        setTimeout(() => {
-            setCompanyAnalysisResult({
-                health: `With a market cap of ${company.marketCap} and revenue generating ${company.revenue}, ${company.name} sustains strong liquidity ratios. However, capital expenditure in R&D continues to stress short-term free cash flow.`,
-                position: `As a heavyweight in the ${company.sector} sector, their competitive moat remains robust. Brand loyalty and a sticky ecosystem buffer them from immediate macro-economic shocks relative to their peers.`,
-                outlook: `Analysts are modeling positive forward guidance into Q3. Key upcoming catalysts include their pending product unveil and potential expansion into emerging Asian markets.`
+        try {
+            const res = await fetch('/api/ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ toolId: 'business', input: `Analyze this company:\nName: ${company.name}\nTicker: ${company.ticker}\nSector: ${company.sector}\nMarket Cap: ${company.marketCap}\nRevenue: ${company.revenue}\nCEO: ${company.ceo}\nPrice: ${company.price} (${company.change})\n\nProvide analysis in exactly 3 sections: 1) FINANCIAL HEALTH 2) COMPETITIVE POSITION 3) FORWARD OUTLOOK. Keep each section to 2-3 sentences.` }),
             });
-            setIsAnalyzingCompany(false);
-        }, 3000); // slight delay to simulate "crunching" large cap data
+            const data = await res.json();
+            if (data.success && data.output) {
+                const sections = data.output.split(/\d+\)\s*|#{1,3}\s*/i).filter(Boolean);
+                setCompanyAnalysisResult({
+                    health: sections[0]?.replace(/financial health:?/i, '').trim() || data.output.substring(0, data.output.length / 3),
+                    position: sections[1]?.replace(/competitive position:?/i, '').trim() || data.output.substring(data.output.length / 3, (data.output.length / 3) * 2),
+                    outlook: sections[2]?.replace(/forward outlook:?/i, '').trim() || data.output.substring((data.output.length / 3) * 2),
+                });
+            } else {
+                setCompanyAnalysisResult({ health: 'Analysis unavailable. Please try again.', position: '', outlook: '' });
+            }
+        } catch {
+            setCompanyAnalysisResult({ health: 'Failed to connect to AI service. Please try again.', position: '', outlook: '' });
+        }
+        setIsAnalyzingCompany(false);
     });
 
     // --- Interactive Sector State ---
@@ -138,71 +203,18 @@ export default function BusinessPage() {
         }
     };
 
-    const fetchLivePrices = useCallback(async () => {
-        try {
-            const [mRes, cRes] = await Promise.all([
-                fetch('/api/market-data'),
-                fetch('/api/business/companies')
-            ]);
-
-            const [mData, cData] = await Promise.all([
-                mRes.json(), cRes.json()
-            ]);
-
-            if (mData.marketData) setLiveMarketData(mData.marketData);
-            if (cData.companies) setCompaniesList(cData.companies);
-        } catch (err) {
-            console.error('Failed to fetch live prices', err);
-        }
-    }, []);
-
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const [sRes, dRes, nRes, eRes, pRes] = await Promise.all([
-                fetch('/api/business/stats'),
-                fetch('/api/business/deals'),
-                fetch('/api/business/news'),
-                fetch('/api/politics/events'),
-                fetch('/api/politics/polls')
-            ]);
-
-            const [sData, dData, nData, eData, pData] = await Promise.all([
-                sRes.json(), dRes.json(), nRes.json(), eRes.json(), pRes.json()
-            ]);
-
-            if (sData.marketStats) setMarketStats(sData.marketStats);
-            if (sData.sectorPerformance) setSectors(sData.sectorPerformance);
-            if (sData.economicIndicators) setEconIndicators(sData.economicIndicators);
-            if (dData.deals) setDealsList(dData.deals);
-            if (nData.news) setNews(nData.news);
-            if (eData.events) setEvents(eData.events);
-            if (pData.polls) setPollsList(pData.polls);
-        } catch (err) {
-            console.error('Failed to fetch business data', err);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-        fetchLivePrices();
-        const interval = setInterval(fetchLivePrices, 30000);
-        return () => clearInterval(interval);
-    }, [fetchData, fetchLivePrices]);
+    // Static mode initialized
 
     const vote = (pollId: string, optIdx: number) =>
-        requireAuth(async () => {
-            const res = await fetch('/api/politics/polls', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: pollId, optionIndex: optIdx })
-            });
-            const data = await res.json();
-            if (data.poll) {
-                setPollsList(prev => prev.map(p => p.id === pollId ? data.poll : p));
-            }
+        requireAuth(() => {
+            setPollsList(prev => prev.map(p => {
+                if (p.id === pollId && p.voted === undefined) {
+                    const newOpts = [...p.options];
+                    newOpts[optIdx] = { ...newOpts[optIdx], votes: newOpts[optIdx].votes + 1 };
+                    return { ...p, options: newOpts, voted: optIdx, totalVotes: (p.totalVotes || 0) + 1 };
+                }
+                return p;
+            }));
         });
 
     const filteredCompanies = companiesList.filter(c =>
@@ -217,25 +229,6 @@ export default function BusinessPage() {
 
                 {/* ── LEFT SIDEBAR ── */}
                 <aside className="home-left-panel">
-
-                    {/* Market Pulse card */}
-                    <div className="ai-insights-card" style={{ marginBottom: 16 }}>
-                        <div className="ai-insights-header" style={{ marginBottom: 12 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'linear-gradient(135deg,#10b981,#059669)', padding: '3px 10px', borderRadius: 20, fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.06em' }}>
-                                <BarChartIcon size={11} /> LIVE MARKETS
-                            </div>
-                            <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Market Pulse</span>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                            {liveMarketData?.slice(0, 4).map(m => (
-                                <div key={m?.id} className="ai-insight-tile" onClick={() => setSelectedMarket(m)} style={{ cursor: 'pointer' }}>
-                                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', marginBottom: 2 }}>{m?.symbol || '--'}</div>
-                                    <div style={{ fontWeight: 800, fontSize: '0.88rem' }}>{m?.price || '--'}</div>
-                                    <div style={{ fontSize: '0.65rem', fontWeight: 700, color: m?.positive ? '#34d399' : '#f87171' }}>{m?.change || '--'}</div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
 
                     {/* Sector mini snapshot */}
                     <div className="hp-card">
@@ -277,7 +270,10 @@ export default function BusinessPage() {
 
                     {/* Breaking business news ticker */}
                     <div style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 10, alignItems: 'center', overflowX: 'hidden', position: 'relative' }}>
-                        <span style={{ fontSize: '0.62rem', fontWeight: 800, whiteSpace: 'nowrap', background: 'var(--primary)', color: 'white', padding: '2px 8px', borderRadius: 4, letterSpacing: '0.06em', zIndex: 2 }}>LIVE</span>
+                        <span style={{ fontSize: '0.62rem', fontWeight: 800, whiteSpace: 'nowrap', background: newsIsLive ? '#ef4444' : 'var(--primary)', color: 'white', padding: '2px 8px', borderRadius: 4, letterSpacing: '0.06em', zIndex: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            {newsIsLive && <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'white', animation: 'pulse 1.5s infinite' }} />}
+                            LIVE
+                        </span>
                         <div className="ticker-scroll" style={{ display: 'flex', gap: 24, overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
                             {news.slice(0, 4).map(n => (
                                 <span key={n.id} style={{ whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--text-secondary)', cursor: 'pointer' }}
@@ -293,7 +289,10 @@ export default function BusinessPage() {
                     <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
                         <BriefcaseIcon size={20} />
                         <h1 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>Business Hub</h1>
-                        <span style={{ marginLeft: 'auto', fontSize: '0.72rem', background: 'rgba(16,185,129,0.12)', color: '#10b981', padding: '3px 10px', borderRadius: 20, fontWeight: 700 }}>Markets Open</span>
+                        <span style={{ marginLeft: 'auto', fontSize: '0.72rem', background: newsIsLive ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)', color: newsIsLive ? '#10b981' : '#f59e0b', padding: '3px 10px', borderRadius: 20, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            {newsIsLive && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', animation: 'pulse 2s infinite' }} />}
+                            {newsIsLive ? 'Live Updates' : 'Markets Open'}
+                        </span>
                     </div>
 
                     {/* Tabs */}

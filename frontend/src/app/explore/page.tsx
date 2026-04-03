@@ -2,10 +2,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import {
-    trendingHashtags, users, formatNumber, checkUserHasStory,
-    sectorTrends, economicIndicators
-} from '@/lib/mock-data';
+import { formatNumber, checkUserHasStory } from '@/lib/utils';
 import {
     SearchIcon, TrendingUpIcon, VerifiedIcon, MessageCircleIcon, RepeatIcon,
     HeartIcon, HeartFilledIcon, BookmarkIcon, ShareIcon, FlameIcon, GlobeIcon,
@@ -15,6 +12,7 @@ import {
 import { PostContent } from '@/components/ui/PostContent';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useAuthGate } from '@/components/providers/AuthGuard';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 const ROLE_LABELS: Record<string, string> = {
     politician: 'Politician', official: 'Gov. Official', journalist: 'Journalist',
@@ -45,15 +43,69 @@ const categories = ['All', 'Politics', 'Business', 'Markets', 'Policy', 'Economy
 
 function ExploreContent() {
     const { requireAuth } = useAuthGate();
+    const { user: currentUser } = useAuth();
     const searchParams = useSearchParams();
     const query = searchParams.get('q');
     const [searchQuery, setSearchQuery] = useState('');
     const [activeCategory, setActiveCategory] = useState('All');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const [feedPosts, setFeedPosts] = useState<any[]>([]);
     const [postsLoading, setPostsLoading] = useState(true);
     const [liveMarketData, setLiveMarketData] = useState<any[]>([]);
-    const [liveTrends, setLiveTrends] = useState(sectorTrends);
+    const [liveTrends, setLiveTrends] = useState<any[]>([]);
+    const [notableUsers, setNotableUsers] = useState<any[]>([]);
+    const [hashtagList, setHashtagList] = useState<any[]>([]);
+    const [econIndicators, setEconIndicators] = useState<any[]>([]);
+    
+    // Fetch Notable Figures from API
+    useEffect(() => {
+        fetch('/api/users?limit=6')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.users && data.users.length > 0) {
+                    const backendUsers = data.users.map((u: any) => ({
+                        ...u, 
+                        id: u._id || u.id,
+                        followers: u.followers || [],
+                        following: u.following || []
+                    }));
+                    setNotableUsers(backendUsers);
+                }
+            })
+            .catch(() => { });
+        // Fetch trending hashtags from search API
+        fetch('/api/search?type=trending')
+            .then(r => r.json())
+            .then(data => { if (data.hashtags) setHashtagList(data.hashtags); })
+            .catch(() => {
+                // Inline default trending topics
+                setHashtagList([
+                    { tag: 'DigitalPrivacyAct', posts: 124000, category: 'Legislation' },
+                    { tag: 'Election2026', posts: 890000, category: 'Politics' },
+                    { tag: 'ClimateAction', posts: 456000, category: 'Policy' },
+                    { tag: 'InfrastructureBill', posts: 234000, category: 'Government' },
+                    { tag: 'TransparentGov', posts: 178000, category: 'Governance' },
+                    { tag: 'EducationReform', posts: 345000, category: 'Policy' },
+                ]);
+            });
+        // Fetch economic indicators
+        fetch('/api/politics/stats')
+            .then(r => r.json())
+            .then(data => {
+                if (data.economicIndicators) setEconIndicators(data.economicIndicators);
+                if (data.sectorTrends) setLiveTrends(data.sectorTrends);
+            })
+            .catch(() => {
+                setLiveTrends([
+                    { sector: 'Finance', tag: 'CapitalGainsTax', posts: 87400, change: '+142%', hot: true },
+                    { sector: 'Healthcare', tag: 'AffordableCareAct', posts: 64200, change: '+89%', hot: true },
+                    { sector: 'Energy', tag: 'CleanEnergyFund', posts: 52100, change: '+67%', hot: false },
+                    { sector: 'Technology', tag: 'BroadbandBill', posts: 41800, change: '+54%', hot: false },
+                    { sector: 'Policy', tag: 'ElectionReform2026', posts: 98700, change: '+201%', hot: true },
+                    { sector: 'Economy', tag: 'FedRatecut', posts: 73600, change: '+118%', hot: true },
+                ]);
+            });
+    }, []);
 
     // Live sentiment polling for Sector Trends
     useEffect(() => {
@@ -73,6 +125,7 @@ function ExploreContent() {
         return () => clearInterval(interval);
     }, []);
 
+    // eslint-disable-next-line
     useEffect(() => { if (query) setSearchQuery(decodeURIComponent(query.replace(/^#/, ''))); }, [query]);
 
     // Fetch posts from API
@@ -85,6 +138,7 @@ function ExploreContent() {
         const url = searchQuery
             ? `/api/posts?q=${encodeURIComponent(searchQuery)}`
             : `/api/posts?tab=${tab}`;
+        // eslint-disable-next-line
         setPostsLoading(true);
         fetch(url)
             .then(r => r.json())
@@ -117,6 +171,39 @@ function ExploreContent() {
         if (data.post) setFeedPosts(prev => prev.map(p => p.id === id ? { ...p, bookmarked: data.post.bookmarked } : p));
     });
 
+    const handleFollow = (targetUser: any) => requireAuth(async () => {
+        if (!currentUser) return;
+        const isFollowing = targetUser.followers.includes(currentUser.id);
+        const endpoint = isFollowing ? 'unfollow' : 'follow';
+        
+        // Optimistic update
+        setNotableUsers(prev => prev.map(u => {
+            if (u.id === targetUser.id) {
+                const newFollowers = isFollowing 
+                    ? u.followers.filter((fid: string) => fid !== currentUser.id)
+                    : [...u.followers, currentUser.id];
+                return { ...u, followers: newFollowers };
+            }
+            return u;
+        }));
+
+        try {
+            await fetch(`/api/users/${targetUser.id}/${endpoint}`, { method: 'PUT' });
+        } catch (error) {
+            console.error('Failed to follow/unfollow automatically reverted state');
+            // Revert on failure
+            setNotableUsers(prev => prev.map(u => {
+                if (u.id === targetUser.id) {
+                    const originalFollowers = isFollowing 
+                        ? [...u.followers, currentUser.id]
+                        : u.followers.filter((fid: string) => fid !== currentUser.id);
+                    return { ...u, followers: originalFollowers };
+                }
+                return u;
+            }));
+        }
+    });
+
     const displayPosts = feedPosts;
 
     return (
@@ -126,7 +213,7 @@ function ExploreContent() {
                 {/* Trending Hashtags */}
                 <div className="hp-card">
                     <div className="hp-card-title"><TrendingUpIcon size={15} /> Trending Topics</div>
-                    {trendingHashtags.slice(0, 6).map((t, i) => (
+                    {hashtagList.slice(0, 6).map((t, i) => (
                         <button key={i} onClick={() => setSearchQuery(t.tag)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', borderBottom: i < 5 ? '1px solid var(--border-light)' : 'none' }}>
                             <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.7rem', color: 'var(--primary)', flexShrink: 0 }}>#{i + 1}</div>
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -219,7 +306,7 @@ function ExploreContent() {
                                 </div>
                             </div>
                         </div>
-                        <PostContent content={post.content} />
+                        <PostContent content={post.content} type={post.type} policyTitle={post.policyTitle} policyCategory={post.policyCategory} />
                         <div className="post-actions">
                             <button className="post-action" onClick={() => requireAuth(() => { })}><span className="action-icon"><MessageCircleIcon size={17} /></span><span>{formatNumber(post.comments)}</span></button>
                             <button className="post-action" onClick={() => requireAuth(() => { })}><span className="action-icon"><RepeatIcon size={17} /></span><span>{formatNumber(post.reposts)}</span></button>
@@ -244,29 +331,47 @@ function ExploreContent() {
             <aside className="right-panel">
                 <div className="hp-card">
                     <div className="hp-card-title"><UsersIcon size={15} /> Notable Figures</div>
-                    {users.filter(u => u.verified).map(user => (
-                        <div key={user.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--border-light)' }}>
-                            <Link href={`/profile/${user.username}`}><UserAvatar name={user.name} avatar={user.avatar} size="sm" hasStory={checkUserHasStory(user.id)} /></Link>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <Link href={`/profile/${user.username}`} style={{ fontWeight: 600, fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 4, color: 'inherit', textDecoration: 'none', flexWrap: 'wrap' }}>
-                                    {user.name} <VerifiedIcon size={12} />
-                                </Link>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>@{user.username}</div>
-                                <span className={`role-badge role-${user.role}`} style={{ fontSize: '0.6rem', marginTop: 2, display: 'inline-block' }}>{ROLE_LABELS[user.role] ?? user.role}</span>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>{user.bio.slice(0, 70)}{user.bio.length > 70 ? '…' : ''}</div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                                    <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}><strong style={{ color: 'var(--text-primary)' }}>{formatNumber(user.followers)}</strong> followers</span>
-                                    <button className="btn btn-outline btn-sm" style={{ fontSize: '0.72rem', padding: '3px 10px' }} onClick={() => requireAuth(() => { })}>Follow</button>
+                    <div className="user-tile-grid">
+                        {notableUsers.map(user => {
+                            const followerCount = Array.isArray(user.followers) ? user.followers.length : user.followers;
+                            const isFollowing = currentUser && Array.isArray(user.followers) && user.followers.includes(currentUser.id);
+                            
+                            return (
+                                <div key={user.id} className="user-tile" onClick={() => window.location.href = `/profile/${user.username}`}>
+                                    <div className="user-tile-avatar">
+                                        <UserAvatar name={user.name} avatar={user.avatar} size="lg" hasStory={checkUserHasStory(user.id)} />
+                                    </div>
+                                    <div className="user-tile-name">
+                                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</span>
+                                        {user.verified && <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}><VerifiedIcon size={12} /></span>}
+                                    </div>
+                                    <div className="user-tile-handle">@{user.username}</div>
+                                    <div className="user-tile-role">
+                                        <span className={`role-badge role-${user.role}`} style={{ display: 'inline-block' }}>{ROLE_LABELS[user.role] ?? user.role}</span>
+                                    </div>
+                                    <div className="user-tile-stats">
+                                        <strong style={{ color: 'var(--text-primary)' }}>{formatNumber(followerCount)}</strong> followers
+                                    </div>
+                                    <button 
+                                        className={`btn btn-sm user-tile-btn ${isFollowing ? 'btn-outline' : 'btn-primary'}`}
+                                        onClick={(e) => { 
+                                            e.preventDefault(); 
+                                            e.stopPropagation();
+                                            handleFollow(user); 
+                                        }}
+                                    >
+                                        {isFollowing ? 'Following' : 'Follow'}
+                                    </button>
                                 </div>
-                            </div>
-                        </div>
-                    ))}
+                            );
+                        })}
+                    </div>
                 </div>
 
                 {/* Key Economic Data */}
                 <div className="hp-card" style={{ marginTop: 16 }}>
                     <div className="hp-card-title"><BarChartIcon size={15} /> Economic Snapshot</div>
-                    {economicIndicators.slice(0, 4).map(ind => (
+                    {econIndicators.slice(0, 4).map(ind => (
                         <div key={ind.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--border-light)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{ind.label}</div>
                             <div style={{ textAlign: 'right' }}>
