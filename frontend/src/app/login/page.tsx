@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import Script from 'next/script';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -9,7 +9,7 @@ import { ZapIcon, EyeIcon, EyeOffIcon, ShieldIcon, ArrowLeftIcon } from '@/compo
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
-export default function LoginPage() {
+function LoginPageInner() {
     const { login } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -312,5 +312,19 @@ export default function LoginPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="auth-page">
+                <div className="auth-card fade-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
+                    <span className="auth-spinner" />
+                </div>
+            </div>
+        }>
+            <LoginPageInner />
+        </Suspense>
     );
 }
