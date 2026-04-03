@@ -1,0 +1,5 @@
+backend/
+test-auth.js
+*.txt
+*.py
+*.mjs
