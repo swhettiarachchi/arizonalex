@@ -2030,8 +2030,6 @@ video {
   border-top: 1px solid var(--border);
   z-index: 100;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
   align-items: center;
   justify-items: center;
 }
