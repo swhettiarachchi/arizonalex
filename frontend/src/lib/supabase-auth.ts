@@ -3,13 +3,20 @@ import { cookies } from 'next/headers'
 import type { Database } from './database.types'
 import type { NextRequest } from 'next/server'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+// ── Lazy helpers — only read env vars at runtime, never at import/build time ──
+function getUrl() {
+    return process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+}
+function getServiceKey() {
+    return process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+}
+function getAnonKey() {
+    return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+}
 
 // ── Server-side admin client (bypasses RLS) ──────────────────────────
 export function createAdminClient() {
-    return createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    return createClient<Database>(getUrl(), getServiceKey(), {
         auth: { persistSession: false, autoRefreshToken: false },
     })
 }
@@ -20,7 +27,7 @@ export async function createServerClientFromCookies() {
     const accessToken = cookieStore.get('sb-access-token')?.value
     const refreshToken = cookieStore.get('sb-refresh-token')?.value
 
-    const client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    const client = createClient<Database>(getUrl(), getAnonKey(), {
         auth: { persistSession: false, autoRefreshToken: false },
     })
 
@@ -38,7 +45,7 @@ export async function getAuthUser(req: NextRequest) {
 
     if (!accessToken) return null
 
-    const client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    const client = createClient<Database>(getUrl(), getAnonKey(), {
         auth: { persistSession: false, autoRefreshToken: false },
     })
 

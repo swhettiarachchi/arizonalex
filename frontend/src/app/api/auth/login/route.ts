@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-auth';
-import { supabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
     try {
@@ -14,7 +13,8 @@ export async function POST(req: NextRequest) {
         }
 
         // Sign in with Supabase Auth
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const admin = createAdminClient();
+        const { data, error } = await admin.auth.signInWithPassword({
             email,
             password,
         });
@@ -36,7 +36,6 @@ export async function POST(req: NextRequest) {
         }
 
         // Fetch user profile
-        const admin = createAdminClient();
         const { data: profile } = await admin
             .from('profiles')
             .select('*')

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createAdminClient } from '@/lib/supabase-auth';
 
 export async function POST(req: NextRequest) {
     try {
@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
         }
 
+        const supabase = createAdminClient();
         const { error } = await supabase.auth.updateUser({ password });
         if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-auth';
-import { supabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
     try {
@@ -13,8 +12,10 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        const admin = createAdminClient();
+
         // Verify Google token and sign in via Supabase
-        const { data, error } = await supabase.auth.signInWithIdToken({
+        const { data, error } = await admin.auth.signInWithIdToken({
             provider: 'google',
             token: credential,
         });
@@ -33,7 +34,6 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const admin = createAdminClient();
 
         // Check if profile exists
         const { data: existingProfile } = await admin

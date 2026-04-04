@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createAdminClient } from '@/lib/supabase-auth';
 
 export async function POST(req: NextRequest) {
     try {
         const { email } = await req.json();
         if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 });
 
+        const supabase = createAdminClient();
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/reset-password`,
         });

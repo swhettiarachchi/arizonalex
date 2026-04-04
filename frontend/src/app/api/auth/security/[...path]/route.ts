@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient, getAuthUser } from '@/lib/supabase-auth';
-import { supabase } from '@/lib/supabase';
 
 // GET /api/auth/security/[...path]
 export async function GET(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
@@ -54,25 +53,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pat
     const user = await getAuthUser(req);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    const admin = createAdminClient();
+
     if (subpath === 'change-password') {
         const { newPassword } = await req.json();
         if (!newPassword || newPassword.length < 6) {
             return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
         }
-        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        const { error } = await admin.auth.updateUser({ password: newPassword });
         if (error) return NextResponse.json({ error: error.message }, { status: 400 });
         return NextResponse.json({ success: true, message: 'Password changed' });
     }
 
     if (subpath === 'change-email') {
         const { email } = await req.json();
-        const { error } = await supabase.auth.updateUser({ email });
+        const { error } = await admin.auth.updateUser({ email });
         if (error) return NextResponse.json({ error: error.message }, { status: 400 });
         return NextResponse.json({ success: true, message: 'Email update initiated' });
     }
 
     if (subpath === 'delete-account') {
-        const admin = createAdminClient();
         await admin.auth.admin.deleteUser(user.id);
         return NextResponse.json({ success: true, message: 'Account deleted' });
     }

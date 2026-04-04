@@ -1,28 +1,46 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
 
-// Use fallback values for build time when env vars aren't available
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+// ── Lazy-initialized client (only created when first used, not at import time) ──
+let _supabase: SupabaseClient<Database> | null = null
 
-// ── Client-side Supabase instance (browser) ──────────────────────────
-// Uses the anon key — safe for client-side, protected by RLS policies
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
+export function getSupabase(): SupabaseClient<Database> {
+    if (!_supabase) {
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        if (!url || !key) {
+            throw new Error('Supabase environment variables are not configured')
+        }
+        _supabase = createClient<Database>(url, key, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true,
+            },
+        })
+    }
+    return _supabase
+}
+
+// Backward-compatible export — lazy getter via Proxy
+// This allows `import { supabase } from '@/lib/supabase'` to work without changing consumers
+export const supabase: SupabaseClient<Database> = new Proxy({} as SupabaseClient<Database>, {
+    get(_target, prop) {
+        return (getSupabase() as unknown as Record<string | symbol, unknown>)[prop]
     },
 })
 
 // ── Server-side Supabase instance (API routes, server components) ────
-// Uses the service role key when available for admin operations
-// Falls back to anon key if service role key is not set
 export function createServerClient() {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !(serviceRoleKey || anonKey)) {
+        throw new Error('Supabase environment variables are not configured')
+    }
     return createClient<Database>(
-        supabaseUrl,
-        serviceRoleKey || supabaseAnonKey,
+        url,
+        serviceRoleKey || anonKey!,
         {
             auth: {
                 persistSession: false,
@@ -36,7 +54,7 @@ export function createServerClient() {
 
 /** Sign up a new user with email and password */
 export async function signUp(email: string, password: string, metadata?: Record<string, unknown>) {
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await getSupabase().auth.signUp({
         email,
         password,
         options: { data: metadata },
@@ -46,7 +64,7 @@ export async function signUp(email: string, password: string, metadata?: Record<
 
 /** Sign in with email and password */
 export async function signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await getSupabase().auth.signInWithPassword({
         email,
         password,
     })
@@ -55,7 +73,7 @@ export async function signIn(email: string, password: string) {
 
 /** Sign in with Google OAuth */
 export async function signInWithGoogle() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await getSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
             redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/auth/callback`,
@@ -66,35 +84,32 @@ export async function signInWithGoogle() {
 
 /** Sign out the current user */
 export async function signOut() {
-    const { error } = await supabase.auth.signOut()
+    const { error } = await getSupabase().auth.signOut()
     return { error }
 }
 
 /** Get the current session */
 export async function getSession() {
-    const { data: { session }, error } = await supabase.auth.getSession()
+    const { data: { session }, error } = await getSupabase().auth.getSession()
     return { session, error }
 }
 
 /** Get the current user */
 export async function getUser() {
-    const { data: { user }, error } = await supabase.auth.getUser()
+    const { data: { user }, error } = await getSupabase().auth.getUser()
     return { user, error }
 }
 
 /** Listen to auth state changes */
 export function onAuthStateChange(callback: (event: string, session: unknown) => void) {
-    return supabase.auth.onAuthStateChange(callback)
+    return getSupabase().auth.onAuthStateChange(callback)
 }
 
 // ── Database helpers ─────────────────────────────────────────────────
-// Use supabase.from() directly for type-safe queries:
-//   const { data } = await supabase.from('users').select('*')
-//   const { data } = await supabase.from('posts').select('*').eq('author_id', userId)
 
 /** Upload a file to Supabase Storage */
 export async function uploadFile(bucket: string, path: string, file: File) {
-    const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
+    const { data, error } = await getSupabase().storage.from(bucket).upload(path, file, {
         cacheControl: '3600',
         upsert: false,
     })
@@ -103,7 +118,7 @@ export async function uploadFile(bucket: string, path: string, file: File) {
 
 /** Get a public URL for a file in Supabase Storage */
 export function getPublicUrl(bucket: string, path: string) {
-    const { data } = supabase.storage.from(bucket).getPublicUrl(path)
+    const { data } = getSupabase().storage.from(bucket).getPublicUrl(path)
     return data.publicUrl
 }
 
@@ -115,7 +130,7 @@ export function subscribeToTable(
     callback: (payload: unknown) => void,
     event: 'INSERT' | 'UPDATE' | 'DELETE' | '*' = '*'
 ) {
-    return supabase
+    return getSupabase()
         .channel(`public:${table}`)
         .on(
             'postgres_changes',
