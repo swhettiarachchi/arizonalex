@@ -3,8 +3,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ZapIcon } from '@/components/ui/Icons';
-import { signInWithGoogle } from '@/lib/supabase';
 import FaceVerification, { FaceVerificationResult } from '@/components/ui/FaceVerification';
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 
 const ROLES = [
     { value: 'citizen', label: 'Citizen' },
@@ -44,17 +45,14 @@ export default function RegisterPage() {
     });
     const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
-    // ── Google OAuth via Supabase ──
-    const handleGoogleOAuth = async () => {
+    // ── Google OAuth — direct redirect to Supabase OAuth endpoint ──
+    const handleGoogleOAuth = () => {
         setGoogleLoading(true);
         setError('');
         try {
-            const { error } = await signInWithGoogle();
-            if (error) {
-                setError(error.message || 'Failed to start Google sign-up');
-                setGoogleLoading(false);
-            }
-            // If no error, browser redirects to Google → /api/auth/callback
+            const redirectTo = `${window.location.origin}/auth/callback`;
+            const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+            window.location.href = authUrl;
         } catch {
             setError('Failed to start Google sign-up. Please try again.');
             setGoogleLoading(false);

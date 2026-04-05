@@ -3,8 +3,9 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { signInWithGoogle } from '@/lib/supabase';
 import { ZapIcon, EyeIcon, EyeOffIcon, ShieldIcon, ArrowLeftIcon } from '@/components/ui/Icons';
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 
 function LoginPageInner() {
     const { login } = useAuth();
@@ -31,18 +32,16 @@ function LoginPageInner() {
         else if (err === 'server_error') setError('Server error during sign-in. Please try again.');
     }, [searchParams]);
 
-    // ── Google OAuth via Supabase ──
-    const handleGoogleOAuth = async () => {
+    // ── Google OAuth — direct redirect to Supabase OAuth endpoint ──
+    const handleGoogleOAuth = () => {
         setGoogleLoading(true);
         setError('');
         try {
-            const { error } = await signInWithGoogle();
-            if (error) {
-                setError(error.message || 'Failed to start Google sign-in');
-                setGoogleLoading(false);
-            }
-            // If no error, browser redirects to Google → /api/auth/callback
-        } catch {
+            const redirectTo = `${window.location.origin}/auth/callback`;
+            const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+            window.location.href = authUrl;
+        } catch (err) {
+            console.error('Google OAuth redirect error:', err);
             setError('Failed to start Google sign-in. Please try again.');
             setGoogleLoading(false);
         }

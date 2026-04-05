@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabase } from '@/lib/supabase';
 
 export default function AuthCallbackPage() {
     const router = useRouter();
@@ -11,19 +10,88 @@ export default function AuthCallbackPage() {
     useEffect(() => {
         const handleCallback = async () => {
             try {
-                const supabase = getSupabase();
-
-                // Check for code in URL params (PKCE flow)
+                // Check for code in URL params (authorization code flow)
                 const params = new URLSearchParams(window.location.search);
                 const code = params.get('code');
 
-                if (code) {
-                    // Exchange the authorization code for a session
-                    // The Supabase client has the PKCE code verifier in localStorage
-                    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+                // Check for tokens in URL hash (implicit flow)
+                const hash = window.location.hash.substring(1);
+                const hashParams = new URLSearchParams(hash);
+                const accessToken = hashParams.get('access_token');
+                const refreshToken = hashParams.get('refresh_token');
 
-                    if (exchangeError || !data.session) {
-                        console.error('Code exchange failed:', exchangeError);
+                if (accessToken && refreshToken) {
+                    // Implicit flow — tokens are in the URL hash
+                    setStatus('Setting up your account...');
+
+                    const syncRes = await fetch('/api/auth/session-sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            access_token: accessToken,
+                            refresh_token: refreshToken,
+                        }),
+                    });
+
+                    if (!syncRes.ok) {
+                        const errData = await syncRes.json().catch(() => ({}));
+                        console.error('Session sync failed:', errData);
+                        setStatus('Account setup failed. Redirecting...');
+                        setHasError(true);
+                        setTimeout(() => router.push('/login?error=server_error'), 2000);
+                        return;
+                    }
+
+                    setStatus('Success! Redirecting...');
+                    window.location.href = '/';
+                    return;
+                }
+
+                if (code) {
+                    // Authorization code flow — exchange code via Supabase client
+                    setStatus('Exchanging authorization code...');
+                    try {
+                        const { getSupabase } = await import('@/lib/supabase');
+                        const supabase = getSupabase();
+                        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+                        if (exchangeError || !data.session) {
+                            console.error('Code exchange failed:', exchangeError);
+                            setStatus('Authentication failed. Redirecting...');
+                            setHasError(true);
+                            setTimeout(() => router.push('/login?error=auth_failed'), 2000);
+                            return;
+                        }
+
+                        setStatus('Setting up your account...');
+                        const syncRes = await fetch('/api/auth/session-sync', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                access_token: data.session.access_token,
+                                refresh_token: data.session.refresh_token,
+                            }),
+                        });
+
+                        if (!syncRes.ok) {
+                            console.error('Session sync failed');
+                            setStatus('Account setup failed. Redirecting...');
+                            setHasError(true);
+                            setTimeout(() => router.push('/login?error=server_error'), 2000);
+                            return;
+                        }
+
+                        setStatus('Success! Redirecting...');
+                        window.location.href = '/';
+                        return;
+                    } catch (err) {
+                        console.error('Code exchange error:', err);
+                        // Fallback: try server-side code exchange
+                        const serverRes = await fetch(`/api/auth/callback?code=${encodeURIComponent(code)}`);
+                        if (serverRes.redirected) {
+                            window.location.href = serverRes.url;
+                            return;
+                        }
                         setStatus('Authentication failed. Redirecting...');
                         setHasError(true);
                         setTimeout(() => router.push('/login?error=auth_failed'), 2000);
@@ -31,47 +99,10 @@ export default function AuthCallbackPage() {
                     }
                 }
 
-                // Check for hash-based tokens (implicit flow fallback)
-                // The Supabase client with detectSessionInUrl: true handles this automatically
-
-                // Wait briefly for Supabase to process any URL tokens
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Get the current session
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-                if (sessionError || !session) {
-                    console.error('No session after callback:', sessionError);
-                    setStatus('Authentication failed. Redirecting...');
-                    setHasError(true);
-                    setTimeout(() => router.push('/login?error=auth_failed'), 2000);
-                    return;
-                }
-
-                setStatus('Setting up your account...');
-
-                // Sync the session to httpOnly cookies and ensure profile exists
-                const syncRes = await fetch('/api/auth/session-sync', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        access_token: session.access_token,
-                        refresh_token: session.refresh_token,
-                    }),
-                });
-
-                if (!syncRes.ok) {
-                    const errData = await syncRes.json().catch(() => ({}));
-                    console.error('Session sync failed:', errData);
-                    setStatus('Account setup failed. Redirecting...');
-                    setHasError(true);
-                    setTimeout(() => router.push('/login?error=server_error'), 2000);
-                    return;
-                }
-
-                setStatus('Success! Redirecting...');
-                // Use window.location for a full reload to reflect the new auth state
-                window.location.href = '/';
+                // No code or tokens found
+                setStatus('No authentication data found. Redirecting...');
+                setHasError(true);
+                setTimeout(() => router.push('/login?error=no_code'), 2000);
             } catch (err) {
                 console.error('Auth callback error:', err);
                 setStatus('Something went wrong. Redirecting...');
