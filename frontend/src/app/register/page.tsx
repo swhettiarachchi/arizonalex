@@ -1,13 +1,10 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { ZapIcon } from '@/components/ui/Icons';
 import { signInWithGoogle } from '@/lib/supabase';
 import FaceVerification, { FaceVerificationResult } from '@/components/ui/FaceVerification';
-
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 const ROLES = [
     { value: 'citizen', label: 'Citizen' },
@@ -39,7 +36,6 @@ export default function RegisterPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [showPass, setShowPass] = useState(false);
-    const [gsiReady, setGsiReady] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [faceData, setFaceData] = useState<FaceVerificationResult | null>(null);
     const [form, setForm] = useState({
@@ -48,50 +44,19 @@ export default function RegisterPage() {
     });
     const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
-    const handleGoogleResponse = useCallback(async (response: { credential: string }) => {
-        setLoading(true);
-        setError('');
-        try {
-            const res = await fetch('/api/auth/google', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ credential: response.credential }),
-            });
-            const data = await res.json();
-            if (data.success) {
-                window.location.href = '/';
-            } else {
-                setError(data.error || 'Google sign-up failed');
-            }
-        } catch {
-            setError('Network error. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!gsiReady || !GOOGLE_CLIENT_ID) return;
-        const g = (window as unknown as Record<string, unknown>).google as { accounts: { id: { initialize: (opts: Record<string, unknown>) => void; renderButton: (el: HTMLElement | null, opts: Record<string, unknown>) => void } } } | undefined;
-        if (g?.accounts?.id) {
-            g.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: handleGoogleResponse,
-            });
-            g.accounts.id.renderButton(
-                document.getElementById('google-signup-btn'),
-                { theme: 'outline', size: 'large', width: 400, text: 'signup_with', shape: 'rectangular' }
-            );
-        }
-    }, [gsiReady, handleGoogleResponse]);
-
-    // Supabase OAuth fallback
+    // ── Google OAuth via Supabase ──
     const handleGoogleOAuth = async () => {
         setGoogleLoading(true);
         setError('');
-        const { error } = await signInWithGoogle();
-        if (error) {
-            setError(error.message || 'Failed to start Google sign-up');
+        try {
+            const { error } = await signInWithGoogle();
+            if (error) {
+                setError(error.message || 'Failed to start Google sign-up');
+                setGoogleLoading(false);
+            }
+            // If no error, browser redirects to Google → /api/auth/callback
+        } catch {
+            setError('Failed to start Google sign-up. Please try again.');
             setGoogleLoading(false);
         }
     };
@@ -177,11 +142,6 @@ export default function RegisterPage() {
 
     return (
         <div className="auth-page">
-            <Script
-                src="https://accounts.google.com/gsi/client"
-                strategy="afterInteractive"
-                onLoad={() => setGsiReady(true)}
-            />
             <div className="auth-card fade-in" style={{ maxWidth: 520 }}>
                 <div className="auth-logo">
                     <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', color: 'white' }}><ZapIcon size={24} /></div>
@@ -189,40 +149,33 @@ export default function RegisterPage() {
                     <p>Create your account</p>
                 </div>
 
-                {/* Google Sign-Up — GSI rendered button (primary) */}
-                <div className="google-btn-wrap">
-                    <div id="google-signup-btn" />
-                </div>
-
-                {/* Fallback Google OAuth button */}
-                {!gsiReady && (
-                    <button
-                        className="oauth-btn google-oauth-btn"
-                        onClick={handleGoogleOAuth}
-                        disabled={googleLoading}
-                        id="google-oauth-signup-fallback"
-                        style={{
-                            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                            padding: '12px 16px', borderRadius: 8, border: '1px solid var(--border)',
-                            background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-                            fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-                        }}
-                    >
-                        {googleLoading ? (
-                            <span className="auth-spinner" />
-                        ) : (
-                            <>
-                                <svg width="18" height="18" viewBox="0 0 48 48">
-                                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-                                </svg>
-                                Continue with Google
-                            </>
-                        )}
-                    </button>
-                )}
+                {/* Google Sign-Up via Supabase OAuth */}
+                <button
+                    className="oauth-btn google-oauth-btn"
+                    onClick={handleGoogleOAuth}
+                    disabled={googleLoading}
+                    id="google-oauth-signup-btn"
+                    style={{
+                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                        padding: '12px 16px', borderRadius: 8, border: '1px solid var(--border)',
+                        background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                        fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+                    }}
+                >
+                    {googleLoading ? (
+                        <span className="auth-spinner" />
+                    ) : (
+                        <>
+                            <svg width="18" height="18" viewBox="0 0 48 48">
+                                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                            </svg>
+                            Continue with Google
+                        </>
+                    )}
+                </button>
 
                 <div className="auth-divider">or sign up with email</div>
 
