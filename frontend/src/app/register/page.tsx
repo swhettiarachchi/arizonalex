@@ -51,7 +51,7 @@ export default function RegisterPage() {
         setError('');
         try {
             const redirectTo = `${window.location.origin}/auth/callback`;
-            const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`;
+            const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}&flow_type=implicit`;
             window.location.href = authUrl;
         } catch {
             setError('Failed to start Google sign-up. Please try again.');
