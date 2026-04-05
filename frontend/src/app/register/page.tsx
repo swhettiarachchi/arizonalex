@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ZapIcon } from '@/components/ui/Icons';
 import FaceVerification, { FaceVerificationResult } from '@/components/ui/FaceVerification';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ikilkixuvtemkpviwpzr.supabase.co';
 
 const ROLES = [
     { value: 'citizen', label: 'Citizen' },
