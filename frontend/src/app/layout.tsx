@@ -4,6 +4,7 @@ import ThemeProvider from "@/components/providers/ThemeProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { SocketProvider } from "@/components/providers/SocketProvider";
 import { AuthGateProvider } from "@/components/providers/AuthGuard";
+import HashTokenInterceptor from "@/components/auth/HashTokenInterceptor";
 import AppShell from "./AppShell";
 
 export const viewport: Viewport = {
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
       <body suppressHydrationWarning>
+        <HashTokenInterceptor />
         <ThemeProvider>
           <AuthProvider>
             <SocketProvider>
