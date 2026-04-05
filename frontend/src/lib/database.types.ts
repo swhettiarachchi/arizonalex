@@ -38,6 +38,7 @@ export interface Database {
                     total_reposts: number
                     is_active: boolean
                     theme_preference: string
+                    auth_provider: string | null
                     joined_at: string
                     updated_at: string
                 }
@@ -64,6 +65,7 @@ export interface Database {
                     total_reposts?: number
                     is_active?: boolean
                     theme_preference?: string
+                    auth_provider?: string | null
                     joined_at?: string
                     updated_at?: string
                 }
@@ -89,6 +91,7 @@ export interface Database {
                     total_reposts?: number
                     is_active?: boolean
                     theme_preference?: string
+                    auth_provider?: string | null
                     updated_at?: string
                 }
                 Relationships: []

@@ -14,6 +14,30 @@ export async function POST(req: NextRequest) {
 
         const admin = createAdminClient();
 
+        // ── Smart Auth: Check if email already exists ──
+        const { data: userList } = await admin.auth.admin.listUsers();
+        const existingAuthUser = userList?.users?.find(
+            (u) => u.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        if (existingAuthUser) {
+            const provider = existingAuthUser.app_metadata?.provider;
+            if (provider === 'google') {
+                return NextResponse.json(
+                    {
+                        error: 'This email is already registered with Google. Please login with Google instead.',
+                        errorType: 'provider_mismatch',
+                        provider: 'google',
+                    },
+                    { status: 409 }
+                );
+            }
+            return NextResponse.json(
+                { error: 'An account with this email already exists. Please login instead.' },
+                { status: 409 }
+            );
+        }
+
         // Check if username is taken
         const { data: existing } = await admin
             .from('profiles')
@@ -28,7 +52,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Create auth user in Supabase Auth
+        // Create auth user
         const { data: authData, error: authError } = await admin.auth.signUp({
             email,
             password,
@@ -41,20 +65,14 @@ export async function POST(req: NextRequest) {
         });
 
         if (authError) {
-            return NextResponse.json(
-                { error: authError.message },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: authError.message }, { status: 400 });
         }
 
         if (!authData.user) {
-            return NextResponse.json(
-                { error: 'Failed to create user' },
-                { status: 500 }
-            );
+            return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
         }
 
-        // Create profile in profiles table
+        // Create profile
         const { error: profileError } = await admin
             .from('profiles')
             .insert({
@@ -79,14 +97,13 @@ export async function POST(req: NextRequest) {
             console.error('Profile creation error:', profileError);
         }
 
-        // Create wallet for new user
+        // Create wallet
         await admin.from('wallets').insert({
             user_id: authData.user.id,
-            balance: 100, // Starting credits
+            balance: 100,
             currency: 'AZC',
         });
 
-        // Build response with auth cookies
         const user = {
             id: authData.user.id,
             name,
@@ -100,25 +117,15 @@ export async function POST(req: NextRequest) {
 
         const response = NextResponse.json({ success: true, user });
 
-        // Set Supabase session cookies
         if (authData.session) {
             response.cookies.set('sb-access-token', authData.session.access_token, {
-                httpOnly: true,
-                path: '/',
-                maxAge: 60 * 60,
-                sameSite: 'lax',
+                httpOnly: true, path: '/', maxAge: 60 * 60, sameSite: 'lax',
             });
             response.cookies.set('sb-refresh-token', authData.session.refresh_token, {
-                httpOnly: true,
-                path: '/',
-                maxAge: 60 * 60 * 24 * 7,
-                sameSite: 'lax',
+                httpOnly: true, path: '/', maxAge: 60 * 60 * 24 * 7, sameSite: 'lax',
             });
-            // Legacy cookie for backward compatibility
             response.cookies.set('user-id', authData.user.id, {
-                path: '/',
-                maxAge: 60 * 60 * 24 * 7,
-                sameSite: 'lax',
+                path: '/', maxAge: 60 * 60 * 24 * 7, sameSite: 'lax',
             });
         }
 

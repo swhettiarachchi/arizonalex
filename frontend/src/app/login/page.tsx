@@ -24,12 +24,25 @@ function LoginPageInner() {
     const [otpCode, setOtpCode] = useState('');
     const [devOtp, setDevOtp] = useState('');
 
+    // Smart error state for provider mismatch
+    const [providerHint, setProviderHint] = useState<'google' | 'email' | null>(null);
+
     // Show error from OAuth redirect
     useEffect(() => {
         const err = searchParams.get('error');
         if (err === 'auth_failed') setError('Google sign-in failed. Please try again.');
         else if (err === 'no_code') setError('Authorization code missing. Please try again.');
         else if (err === 'server_error') setError('Server error during sign-in. Please try again.');
+        else if (err === 'provider_mismatch') {
+            const provider = searchParams.get('provider');
+            if (provider === 'google') {
+                setError('This account was created using Google. Please login with Google.');
+                setProviderHint('google');
+            } else {
+                setError('This account was created using email/password. Please login with your password.');
+                setProviderHint('email');
+            }
+        }
     }, [searchParams]);
 
     // ── Google OAuth — direct redirect to Supabase OAuth endpoint ──
@@ -55,18 +68,38 @@ function LoginPageInner() {
         }
         setLoading(true);
         setError('');
-        const result = await login(email, password);
-        setLoading(false);
-        if (result.success) {
-            if (result.requires2FA && result.tempToken) {
-                setRequires2FA(true);
-                setTempToken(result.tempToken);
-                if (result.devOtp) setDevOtp(result.devOtp);
-            } else {
-                router.push('/');
+        // Call login API directly to get full error response (including provider_mismatch)
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+            const data = await res.json();
+            setLoading(false);
+
+            if (data.errorType === 'provider_mismatch') {
+                setError(data.error);
+                setProviderHint(data.provider || 'google');
+                return;
             }
-        } else {
-            setError(result.error || 'Login failed. Please try again.');
+
+            if (data.success && data.requires2FA) {
+                setRequires2FA(true);
+                setTempToken(data.tempToken);
+                if (data.devOtp) setDevOtp(data.devOtp);
+                return;
+            }
+
+            if (data.success && data.user) {
+                // Manually sync auth state
+                window.location.href = '/';
+            } else {
+                setError(data.error || 'Login failed. Please try again.');
+            }
+        } catch {
+            setLoading(false);
+            setError('Network error. Please try again.');
         }
     };
 
@@ -237,9 +270,26 @@ function LoginPageInner() {
                     </div>
 
                     {error && (
-                        <div className="auth-error">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
-                            {error}
+                        <div className="auth-error" style={{ flexDirection: 'column', gap: 8 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                                {error}
+                            </div>
+                            {providerHint === 'google' && (
+                                <button
+                                    type="button"
+                                    onClick={handleGoogleOAuth}
+                                    style={{
+                                        padding: '8px 16px', borderRadius: 6,
+                                        background: '#4285f4', color: 'white',
+                                        border: 'none', cursor: 'pointer',
+                                        fontWeight: 600, fontSize: '0.85rem',
+                                        marginTop: 4,
+                                    }}
+                                >
+                                    Continue with Google instead →
+                                </button>
+                            )}
                         </div>
                     )}
 

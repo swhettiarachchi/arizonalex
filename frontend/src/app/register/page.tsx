@@ -194,9 +194,26 @@ export default function RegisterPage() {
                 </div>
 
                 {error && (
-                    <div className="auth-error">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
-                        {error}
+                    <div className="auth-error" style={{ flexDirection: 'column', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                            {error}
+                        </div>
+                        {error.includes('Google') && (
+                            <button
+                                type="button"
+                                onClick={handleGoogleOAuth}
+                                style={{
+                                    padding: '8px 16px', borderRadius: 6,
+                                    background: '#4285f4', color: 'white',
+                                    border: 'none', cursor: 'pointer',
+                                    fontWeight: 600, fontSize: '0.85rem',
+                                    marginTop: 4,
+                                }}
+                            >
+                                Continue with Google instead →
+                            </button>
+                        )}
                     </div>
                 )}
 

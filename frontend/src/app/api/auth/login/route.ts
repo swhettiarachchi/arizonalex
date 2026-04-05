@@ -12,8 +12,33 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Sign in with Supabase Auth
         const admin = createAdminClient();
+
+        // ── Smart Auth: Check if this email was registered with Google ──
+        const { data: userList } = await admin.auth.admin.listUsers();
+        const existingAuthUser = userList?.users?.find(
+            (u) => u.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        if (existingAuthUser) {
+            // Use Supabase's built-in provider tracking
+            const provider = existingAuthUser.app_metadata?.provider;
+            const providers = existingAuthUser.app_metadata?.providers || [];
+
+            // If user was created via Google OAuth (not email)
+            if (provider === 'google' || (providers.includes('google') && !providers.includes('email'))) {
+                return NextResponse.json(
+                    {
+                        error: 'This account was created using Google. Please login with Google.',
+                        errorType: 'provider_mismatch',
+                        provider: 'google',
+                    },
+                    { status: 403 }
+                );
+            }
+        }
+
+        // ── Standard email/password login ──
         const { data, error } = await admin.auth.signInWithPassword({
             email,
             password,
@@ -22,7 +47,7 @@ export async function POST(req: NextRequest) {
         if (error) {
             return NextResponse.json(
                 { error: error.message === 'Invalid login credentials'
-                    ? 'Invalid credentials'
+                    ? 'Invalid email or password'
                     : error.message },
                 { status: 401 }
             );
@@ -59,23 +84,14 @@ export async function POST(req: NextRequest) {
 
         const response = NextResponse.json({ success: true, user });
 
-        // Set Supabase session cookies
         response.cookies.set('sb-access-token', data.session.access_token, {
-            httpOnly: true,
-            path: '/',
-            maxAge: 60 * 60,
-            sameSite: 'lax',
+            httpOnly: true, path: '/', maxAge: 60 * 60, sameSite: 'lax',
         });
         response.cookies.set('sb-refresh-token', data.session.refresh_token, {
-            httpOnly: true,
-            path: '/',
-            maxAge: 60 * 60 * 24 * 7,
-            sameSite: 'lax',
+            httpOnly: true, path: '/', maxAge: 60 * 60 * 24 * 7, sameSite: 'lax',
         });
         response.cookies.set('user-id', data.user.id, {
-            path: '/',
-            maxAge: 60 * 60 * 24 * 7,
-            sameSite: 'lax',
+            path: '/', maxAge: 60 * 60 * 24 * 7, sameSite: 'lax',
         });
 
         return response;

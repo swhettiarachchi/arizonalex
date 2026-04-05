@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Missing tokens' }, { status: 400 });
         }
 
-        // Verify the access token to get the user
+        // Verify the access token
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -25,70 +25,102 @@ export async function POST(req: NextRequest) {
         }
 
         const admin = createAdminClient();
+        const userEmail = user.email || '';
 
-        // Check if profile exists
+        // ── Smart Auth: Check for provider conflicts ──
+        // Check if this email already has a profile via a DIFFERENT Supabase user (email signup)
+        if (userEmail) {
+            const { data: allUsers } = await admin.auth.admin.listUsers();
+            const emailUser = allUsers?.users?.find(
+                (u) => u.email?.toLowerCase() === userEmail.toLowerCase() && u.id !== user.id
+            );
+
+            if (emailUser) {
+                const emailProvider = emailUser.app_metadata?.provider;
+                if (emailProvider === 'email') {
+                    return NextResponse.json({
+                        error: 'This email is already registered with email/password. Please login with your password.',
+                        errorType: 'provider_mismatch',
+                        provider: 'email',
+                    }, { status: 403 });
+                }
+            }
+        }
+
+        // Check if profile exists for this user
         const { data: existingProfile } = await admin
             .from('profiles')
             .select('*')
             .eq('id', user.id)
             .single();
 
-        // Create profile if first-time OAuth sign-in
-        if (!existingProfile) {
-            const email = user.email || '';
-            const name = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0];
-            const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
-
-            // Generate unique username from email
-            let baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 25);
-            let username = baseUsername;
-            let counter = 1;
-            let taken = true;
-
-            while (taken) {
-                const { data: check } = await admin
-                    .from('profiles')
-                    .select('id')
-                    .eq('username', username)
-                    .single();
-
-                if (!check) {
-                    taken = false;
-                } else {
-                    username = `${baseUsername.substring(0, 25)}${counter}`;
-                    counter++;
-                }
-            }
-
-            await admin.from('profiles').insert({
-                id: user.id,
-                username,
-                display_name: name,
-                avatar_url: avatar,
-                role: 'citizen',
-                is_verified: true,
-                trust_score: 0,
-                followers_count: 0,
-                following_count: 0,
-                posts_count: 0,
-                profile_views: 0,
-                total_likes: 0,
-                total_reposts: 0,
-                is_active: true,
-                theme_preference: 'dark',
+        if (existingProfile) {
+            // Existing user — just log them in
+            const response = NextResponse.json({ success: true });
+            response.cookies.set('sb-access-token', access_token, {
+                httpOnly: true, path: '/', maxAge: 60 * 60, sameSite: 'lax',
             });
-
-            // Create wallet for new user
-            await admin.from('wallets').insert({
-                user_id: user.id,
-                balance: 100,
-                currency: 'AZC',
+            response.cookies.set('sb-refresh-token', refresh_token, {
+                httpOnly: true, path: '/', maxAge: 60 * 60 * 24 * 7, sameSite: 'lax',
             });
+            response.cookies.set('user-id', user.id, {
+                path: '/', maxAge: 60 * 60 * 24 * 7, sameSite: 'lax',
+            });
+            return response;
         }
 
-        // Set session cookies
-        const response = NextResponse.json({ success: true });
+        // ── New user — create profile ──
+        const name = user.user_metadata?.full_name || user.user_metadata?.name || userEmail.split('@')[0];
+        const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
 
+        // Generate unique username
+        let baseUsername = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 25);
+        let username = baseUsername;
+        let counter = 1;
+        let taken = true;
+
+        while (taken) {
+            const { data: check } = await admin
+                .from('profiles')
+                .select('id')
+                .eq('username', username)
+                .single();
+
+            if (!check) {
+                taken = false;
+            } else {
+                username = `${baseUsername.substring(0, 25)}${counter}`;
+                counter++;
+            }
+        }
+
+        await admin.from('profiles').insert({
+            id: user.id,
+            username,
+            display_name: name,
+            avatar_url: avatar,
+            role: 'citizen',
+            is_verified: true,
+            trust_score: 0,
+            followers_count: 0,
+            following_count: 0,
+            posts_count: 0,
+            profile_views: 0,
+            total_likes: 0,
+            total_reposts: 0,
+            is_active: true,
+            theme_preference: 'dark',
+        });
+
+        // Create wallet
+        await admin.from('wallets').insert({
+            user_id: user.id,
+            balance: 100,
+            currency: 'AZC',
+        });
+
+        // Set session cookies
+        const response = NextResponse.json({ success: true, isNewUser: true });
         response.cookies.set('sb-access-token', access_token, {
             httpOnly: true, path: '/', maxAge: 60 * 60, sameSite: 'lax',
         });

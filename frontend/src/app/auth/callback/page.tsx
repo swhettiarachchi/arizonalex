@@ -1,24 +1,26 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function AuthCallbackPage() {
     const router = useRouter();
     const [status, setStatus] = useState('Completing sign-in...');
     const [hasError, setHasError] = useState(false);
+    const [errorDetail, setErrorDetail] = useState('');
 
     useEffect(() => {
         const handleCallback = async () => {
             try {
-                // Check for code in URL params (authorization code flow)
-                const params = new URLSearchParams(window.location.search);
-                const code = params.get('code');
-
                 // Check for tokens in URL hash (implicit flow)
                 const hash = window.location.hash.substring(1);
                 const hashParams = new URLSearchParams(hash);
                 const accessToken = hashParams.get('access_token');
                 const refreshToken = hashParams.get('refresh_token');
+
+                // Check for code in URL params (authorization code flow)
+                const params = new URLSearchParams(window.location.search);
+                const code = params.get('code');
 
                 if (accessToken && refreshToken) {
                     // Implicit flow — tokens are in the URL hash
@@ -33,12 +35,23 @@ export default function AuthCallbackPage() {
                         }),
                     });
 
+                    const syncData = await syncRes.json().catch(() => ({}));
+
                     if (!syncRes.ok) {
-                        const errData = await syncRes.json().catch(() => ({}));
-                        console.error('Session sync failed:', errData);
+                        // Check for provider mismatch error
+                        if (syncData.errorType === 'provider_mismatch') {
+                            setStatus(syncData.error || 'Wrong login method');
+                            setErrorDetail(syncData.provider === 'email'
+                                ? 'Please go to the login page and use your email and password.'
+                                : 'Please go to the login page and use Google sign-in.');
+                            setHasError(true);
+                            return; // Don't auto-redirect — show error with link
+                        }
+
+                        console.error('Session sync failed:', syncData);
                         setStatus('Account setup failed. Redirecting...');
                         setHasError(true);
-                        setTimeout(() => router.push('/login?error=server_error'), 2000);
+                        setTimeout(() => router.push('/login?error=server_error'), 2500);
                         return;
                     }
 
@@ -48,7 +61,7 @@ export default function AuthCallbackPage() {
                 }
 
                 if (code) {
-                    // Authorization code flow — exchange code via Supabase client
+                    // Authorization code flow
                     setStatus('Exchanging authorization code...');
                     try {
                         const { getSupabase } = await import('@/lib/supabase');
@@ -59,7 +72,7 @@ export default function AuthCallbackPage() {
                             console.error('Code exchange failed:', exchangeError);
                             setStatus('Authentication failed. Redirecting...');
                             setHasError(true);
-                            setTimeout(() => router.push('/login?error=auth_failed'), 2000);
+                            setTimeout(() => router.push('/login?error=auth_failed'), 2500);
                             return;
                         }
 
@@ -73,11 +86,21 @@ export default function AuthCallbackPage() {
                             }),
                         });
 
+                        const syncData = await syncRes.json().catch(() => ({}));
+
                         if (!syncRes.ok) {
-                            console.error('Session sync failed');
+                            if (syncData.errorType === 'provider_mismatch') {
+                                setStatus(syncData.error || 'Wrong login method');
+                                setErrorDetail(syncData.provider === 'email'
+                                    ? 'Please go to the login page and use your email and password.'
+                                    : 'Please go to the login page and use Google sign-in.');
+                                setHasError(true);
+                                return;
+                            }
+
                             setStatus('Account setup failed. Redirecting...');
                             setHasError(true);
-                            setTimeout(() => router.push('/login?error=server_error'), 2000);
+                            setTimeout(() => router.push('/login?error=server_error'), 2500);
                             return;
                         }
 
@@ -86,15 +109,9 @@ export default function AuthCallbackPage() {
                         return;
                     } catch (err) {
                         console.error('Code exchange error:', err);
-                        // Fallback: try server-side code exchange
-                        const serverRes = await fetch(`/api/auth/callback?code=${encodeURIComponent(code)}`);
-                        if (serverRes.redirected) {
-                            window.location.href = serverRes.url;
-                            return;
-                        }
                         setStatus('Authentication failed. Redirecting...');
                         setHasError(true);
-                        setTimeout(() => router.push('/login?error=auth_failed'), 2000);
+                        setTimeout(() => router.push('/login?error=auth_failed'), 2500);
                         return;
                     }
                 }
@@ -102,12 +119,12 @@ export default function AuthCallbackPage() {
                 // No code or tokens found
                 setStatus('No authentication data found. Redirecting...');
                 setHasError(true);
-                setTimeout(() => router.push('/login?error=no_code'), 2000);
+                setTimeout(() => router.push('/login?error=no_code'), 2500);
             } catch (err) {
                 console.error('Auth callback error:', err);
                 setStatus('Something went wrong. Redirecting...');
                 setHasError(true);
-                setTimeout(() => router.push('/login?error=server_error'), 2000);
+                setTimeout(() => router.push('/login?error=server_error'), 2500);
             }
         };
 
@@ -118,22 +135,49 @@ export default function AuthCallbackPage() {
         <div className="auth-page">
             <div className="auth-card fade-in" style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', minHeight: 220, gap: 16, textAlign: 'center',
+                justifyContent: 'center', minHeight: 240, gap: 16, textAlign: 'center',
+                padding: '32px 24px',
             }}>
                 {!hasError && <span className="auth-spinner" />}
                 {hasError && (
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10" />
-                        <line x1="15" y1="9" x2="9" y2="15" />
-                        <line x1="9" y1="9" x2="15" y2="15" />
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--warning, #f59e0b)" strokeWidth="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
                     </svg>
                 )}
                 <p style={{
-                    color: hasError ? 'var(--danger)' : 'var(--text-secondary)',
-                    fontSize: '0.9rem', fontWeight: 500,
+                    color: hasError ? 'var(--warning, #f59e0b)' : 'var(--text-secondary)',
+                    fontSize: '0.95rem', fontWeight: 600, lineHeight: 1.5,
                 }}>
                     {status}
                 </p>
+                {errorDetail && (
+                    <p style={{
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.85rem', marginTop: -8,
+                    }}>
+                        {errorDetail}
+                    </p>
+                )}
+                {hasError && (
+                    <Link
+                        href="/login"
+                        style={{
+                            marginTop: 8,
+                            padding: '10px 24px',
+                            borderRadius: 8,
+                            background: 'var(--primary)',
+                            color: 'white',
+                            fontWeight: 600,
+                            fontSize: '0.9rem',
+                            textDecoration: 'none',
+                            transition: 'opacity 0.15s',
+                        }}
+                    >
+                        Go to Login
+                    </Link>
+                )}
             </div>
         </div>
     );
