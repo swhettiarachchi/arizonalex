@@ -56,7 +56,7 @@ export default function AuthCallbackPage() {
                     }
 
                     setStatus('Success! Redirecting...');
-                    window.location.href = '/';
+                    window.location.replace('/');
                     return;
                 }
 
@@ -105,7 +105,7 @@ export default function AuthCallbackPage() {
                         }
 
                         setStatus('Success! Redirecting...');
-                        window.location.href = '/';
+                        window.location.replace('/');
                         return;
                     } catch (err) {
                         console.error('Code exchange error:', err);
