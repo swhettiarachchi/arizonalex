@@ -12,7 +12,12 @@ import {
 
 // ── Politician Section ──────────────────────────────────────────────────
 export function PoliticianSection({ user }: { user: User }) {
-    if (!user.position && !user.party) return null;
+    // Always show for politician/official roles, even if fields are empty
+    const isPolitical = user.role === 'politician' || user.role === 'official';
+    if (!isPolitical && !user.position && !user.party) return null;
+
+    const hasDetails = user.position || user.party || user.ideology || user.country || user.yearsActive;
+
     return (
         <div className="prof-section-card prof-politician">
             <div className="prof-section-header">
@@ -20,44 +25,56 @@ export function PoliticianSection({ user }: { user: User }) {
                 <span>Political Profile</span>
                 {user.verified && <span className="prof-verified-badge prof-badge-politician">✓ Verified Politician</span>}
             </div>
-            <div className="prof-detail-grid">
-                {user.position && (
-                    <div className="prof-detail-item">
-                        <span className="prof-detail-label">Position</span>
-                        <span className="prof-detail-value">{user.position}</span>
-                    </div>
-                )}
-                {user.party && (
-                    <div className="prof-detail-item">
-                        <span className="prof-detail-label">Party</span>
-                        <span className="prof-detail-value">{user.party}</span>
-                    </div>
-                )}
-                {user.ideology && (
-                    <div className="prof-detail-item">
-                        <span className="prof-detail-label">Ideology</span>
-                        <span className="prof-detail-value">{user.ideology}</span>
-                    </div>
-                )}
-                {user.country && (
-                    <div className="prof-detail-item">
-                        <span className="prof-detail-label">Country</span>
-                        <span className="prof-detail-value">{user.country}</span>
-                    </div>
-                )}
-                {user.yearsActive && (
-                    <div className="prof-detail-item">
-                        <span className="prof-detail-label">Years Active</span>
-                        <span className="prof-detail-value">{user.yearsActive}</span>
-                    </div>
-                )}
-                {user.supportPercentage !== undefined && (
-                    <div className="prof-detail-item">
-                        <span className="prof-detail-label">Public Support</span>
-                        <span className="prof-detail-value prof-support">{user.supportPercentage}%</span>
-                    </div>
-                )}
-            </div>
+
+            {hasDetails ? (
+                <div className="prof-detail-grid">
+                    {user.position && (
+                        <div className="prof-detail-item">
+                            <span className="prof-detail-label">Position</span>
+                            <span className="prof-detail-value">{user.position}</span>
+                        </div>
+                    )}
+                    {user.party && (
+                        <div className="prof-detail-item">
+                            <span className="prof-detail-label">Party</span>
+                            <span className="prof-detail-value">{user.party}</span>
+                        </div>
+                    )}
+                    {user.ideology && (
+                        <div className="prof-detail-item">
+                            <span className="prof-detail-label">Ideology</span>
+                            <span className="prof-detail-value">{user.ideology}</span>
+                        </div>
+                    )}
+                    {user.country && (
+                        <div className="prof-detail-item">
+                            <span className="prof-detail-label">Country</span>
+                            <span className="prof-detail-value">{user.country}</span>
+                        </div>
+                    )}
+                    {user.yearsActive && (
+                        <div className="prof-detail-item">
+                            <span className="prof-detail-label">Years Active</span>
+                            <span className="prof-detail-value">{user.yearsActive}</span>
+                        </div>
+                    )}
+                    {user.supportPercentage !== undefined && (
+                        <div className="prof-detail-item">
+                            <span className="prof-detail-label">Public Support</span>
+                            <span className="prof-detail-value prof-support">{user.supportPercentage}%</span>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div style={{ padding: '16px 0', textAlign: 'center' }}>
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem', margin: '0 0 8px' }}>
+                        No political details added yet.
+                    </p>
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem', margin: 0 }}>
+                        Edit your profile to add your position, party, ideology, and more.
+                    </p>
+                </div>
+            )}
 
             {/* Campaign Promises */}
             {user.campaignPromises && user.campaignPromises.length > 0 && (
@@ -107,7 +124,8 @@ export function PoliticianSection({ user }: { user: User }) {
 
 // ── Business / Professional Section ──────────────────────────────────────
 export function BusinessSection({ user }: { user: User }) {
-    if (!user.company && !user.industry) return null;
+    const isBusiness = user.role === 'businessman' || user.role === 'entrepreneur' || user.role === 'journalist' || user.role === 'banker';
+    if (!isBusiness && !user.company && !user.industry) return null;
     return (
         <div className="prof-section-card prof-business">
             <div className="prof-section-header">
