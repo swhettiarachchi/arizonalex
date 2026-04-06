@@ -33,8 +33,9 @@ export async function POST(req: NextRequest) {
         }
 
         // Send password reset email via Supabase
+        const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || process.env.NEXT_PUBLIC_APP_URL || '';
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/forgot-password?step=reset`,
+            redirectTo: `${origin}/forgot-password?step=reset`,
         });
 
         if (error) {
