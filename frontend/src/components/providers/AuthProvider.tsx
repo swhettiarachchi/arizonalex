@@ -23,18 +23,26 @@ export interface UserProfile {
     verified?: boolean;
     followers?: number;
     following?: number;
+    followersCount?: number;
+    followingCount?: number;
+    postsCount?: number;
+    profileViews?: number;
     joined?: string;
     twoFactorEnabled?: boolean;
+    // Political fields
     position?: string;
     ideology?: string;
     yearsActive?: string;
     country?: string;
     campaignPromises?: string[];
     achievements?: string[];
+    supportPercentage?: number;
+    // Business fields
     company?: string;
     industry?: string;
     services?: string[];
     portfolioUrl?: string;
+    // Verification fields
     faceVerified?: boolean;
     verificationScore?: number;
     verificationDate?: string;

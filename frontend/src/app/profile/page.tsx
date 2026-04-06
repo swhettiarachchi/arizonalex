@@ -612,13 +612,36 @@ export default function ProfilePage() {
     const mutuals = allUsers.filter(u => u.id !== mockUser.id && u.verified).slice(0, 3);
     const similarUsers = allUsers.filter(u => u.id !== mockUser.id).slice(0, 4);
 
-    // Build a mock user object with display overrides for ProfileComponents
+    // Build user object with all display overrides for ProfileComponents
     const profileUser = {
         ...mockUser,
-        bio: displayBio,
-        party: displayParty,
-        role: displayRole,
-    };
+        ...(isLoggedIn && loggedInUser ? {
+            name: loggedInUser.name,
+            username: loggedInUser.username,
+            avatar: loggedInUser.avatar || '',
+            bio: loggedInUser.bio || '',
+            role: loggedInUser.role || 'citizen',
+            party: loggedInUser.party || '',
+            verified: loggedInUser.verified || false,
+            followers: loggedInUser.followers ?? loggedInUser.followersCount ?? 0,
+            following: loggedInUser.following ?? loggedInUser.followingCount ?? 0,
+            joined: loggedInUser.joined || '',
+            profileViews: loggedInUser.profileViews ?? 0,
+            // Political fields
+            position: loggedInUser.position || '',
+            ideology: loggedInUser.ideology || '',
+            yearsActive: loggedInUser.yearsActive || '',
+            country: loggedInUser.country || '',
+            campaignPromises: loggedInUser.campaignPromises || [],
+            achievements: loggedInUser.achievements || [],
+            supportPercentage: loggedInUser.supportPercentage,
+            // Business fields
+            company: loggedInUser.company || '',
+            industry: loggedInUser.industry || '',
+            services: loggedInUser.services || [],
+            portfolioUrl: loggedInUser.portfolioUrl || '',
+        } : {}),
+    } as any;
 
     return (
         <div className="page-container home-3col">
