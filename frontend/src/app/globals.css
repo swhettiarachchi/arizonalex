@@ -13170,3 +13170,412 @@ video {
   .mode-toggle-btn { padding: 5px 10px; font-size: 0.72rem; }
   .debate-card-country-badge { font-size: 0.65rem; padding: 2px 6px; }
 }
+
+/* ============================================
+   COMPREHENSIVE MOBILE RESPONSIVENESS
+   ============================================ */
+
+/* ── Small screens (phones) ── */
+@media (max-width: 640px) {
+
+  /* ── COMPOSE BOX ── */
+  .compose-box {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .compose-textarea {
+    font-size: 0.9rem;
+    min-height: 50px;
+  }
+
+  .compose-actions-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .compose-tools {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    gap: 2px;
+  }
+
+  .compose-tools::-webkit-scrollbar {
+    display: none;
+  }
+
+  .compose-tool {
+    padding: 6px;
+    flex-shrink: 0;
+  }
+
+  .compose-tool svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ── POST CARDS ── */
+  .post-card {
+    padding: 12px;
+  }
+
+  .post-header {
+    gap: 10px;
+  }
+
+  .post-content {
+    padding-left: 0;
+    font-size: 0.88rem;
+    margin: 8px 0;
+  }
+
+  .post-actions {
+    padding-left: 0;
+    max-width: 100%;
+    gap: 2px;
+  }
+
+  .post-action {
+    padding: 5px 6px;
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+
+  .post-action svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .post-author {
+    font-size: 0.85rem;
+  }
+
+  .post-handle {
+    font-size: 0.75rem;
+  }
+
+  .post-time {
+    font-size: 0.75rem;
+  }
+
+  .post-avatar,
+  .avatar-md {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+  }
+
+  /* ── STORY BAR ── */
+  .story-bar {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .story-ring {
+    width: 60px;
+    height: 60px;
+  }
+
+  .story-name {
+    font-size: 0.62rem;
+    max-width: 56px;
+  }
+
+  /* ── HP / SIDEBAR CARDS ── */
+  .hp-card {
+    padding: 14px;
+  }
+
+  .hp-card-title {
+    font-size: 0.85rem;
+  }
+
+  /* ── PROFILE PAGE ── */
+  .prof-tile {
+    padding: 12px;
+  }
+
+  .prof-section-card {
+    padding: 14px;
+  }
+
+  .prof-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .prof-analytics-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .prof-analytics-card {
+    padding: 12px;
+  }
+
+  .prof-engagement-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .prof-voter-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    padding: 0 8px;
+    gap: 0;
+  }
+
+  .tab {
+    padding: 10px 10px;
+    font-size: 0.78rem;
+  }
+
+  /* ── ROLE BADGES ── */
+  .role-badge {
+    font-size: 0.62rem;
+    padding: 2px 6px;
+  }
+
+  /* ── SEARCH ── */
+  .search-box {
+    padding: 8px 12px;
+  }
+
+  .search-box input {
+    font-size: 0.82rem;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 8px 16px;
+    font-size: 0.82rem;
+    gap: 6px;
+  }
+
+  .btn-lg {
+    padding: 12px 22px;
+    font-size: 0.92rem;
+  }
+
+  .btn-sm {
+    padding: 5px 12px;
+    font-size: 0.75rem;
+  }
+
+  /* ── GUEST CTA ── */
+  .guest-cta-card {
+    padding: 14px;
+  }
+
+  .guest-cta-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .guest-cta-actions {
+    width: 100%;
+  }
+
+  .guest-cta-btn-primary,
+  .guest-cta-btn-secondary {
+    flex: 1;
+    text-align: center;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+
+  .guest-cta-headline {
+    font-size: 0.88rem;
+  }
+
+  .guest-cta-sub {
+    font-size: 0.75rem;
+  }
+
+  /* ── MODALS ── */
+  .modal-content,
+  .auth-card {
+    max-width: 100% !important;
+    width: 95% !important;
+    margin: 10px;
+    border-radius: 16px;
+  }
+
+  /* ── CHAT ── */
+  .chat-bubble {
+    max-width: 85%;
+    padding: 10px 14px;
+    font-size: 0.84rem;
+  }
+
+  .chat-input-bar {
+    padding: 10px 12px;
+  }
+
+  .chat-input {
+    padding: 10px 16px;
+    font-size: 0.84rem;
+  }
+
+  .chat-send {
+    width: 38px;
+    height: 38px;
+  }
+
+  /* ── UPLOAD PREVIEWS ── */
+  .upload-preview-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  /* ── POST POLICY CARD ── */
+  .policy-card {
+    padding: 12px;
+  }
+
+  /* ── POLL EDITOR ── */
+  .poll-editor {
+    padding: 10px;
+  }
+
+  /* ── FORM INPUTS ── */
+  .form-input,
+  .form-select,
+  .form-textarea {
+    font-size: 0.85rem;
+    padding: 10px 12px;
+  }
+
+  /* ── AUTH PAGES ── */
+  .auth-page {
+    padding: 16px;
+  }
+
+  .auth-card {
+    padding: 20px 16px;
+  }
+
+  .auth-logo h1 {
+    font-size: 1.3rem;
+  }
+
+  .auth-step-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .auth-step-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ── NEWS / ARTICLE CARDS ── */
+  .news-card {
+    padding: 12px;
+  }
+
+  /* ── NOTIFICATION ITEMS ── */
+  .notif-item {
+    padding: 10px 12px;
+  }
+
+  /* ── 3-COLUMN LAYOUT ── */
+  .page-container.home-3col {
+    padding: 0;
+  }
+
+  /* ── TRENDING TAGS ── */
+  .trending-tags {
+    gap: 4px;
+  }
+
+  .trending-tag {
+    font-size: 0.72rem;
+    padding: 4px 8px;
+  }
+}
+
+/* ── Extra small screens (very narrow phones) ── */
+@media (max-width: 380px) {
+
+  .compose-box {
+    padding: 10px 8px;
+    gap: 8px;
+  }
+
+  .compose-tool {
+    padding: 5px;
+  }
+
+  .compose-tool svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .post-card {
+    padding: 10px 8px;
+  }
+
+  .post-actions {
+    justify-content: space-around;
+  }
+
+  .post-action {
+    padding: 4px 4px;
+    font-size: 0.7rem;
+  }
+
+  .post-action span:not(.action-icon) {
+    display: none;
+  }
+
+  .post-author {
+    font-size: 0.8rem;
+  }
+
+  .post-handle,
+  .post-time {
+    font-size: 0.7rem;
+  }
+
+  .story-ring {
+    width: 52px;
+    height: 52px;
+  }
+
+  .story-name {
+    font-size: 0.58rem;
+    max-width: 48px;
+  }
+
+  .btn {
+    padding: 7px 12px;
+    font-size: 0.78rem;
+  }
+
+  .auth-card {
+    padding: 16px 12px;
+  }
+
+  .prof-analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guest-cta-actions {
+    flex-direction: column;
+  }
+
+  .guest-cta-btn-primary,
+  .guest-cta-btn-secondary {
+    width: 100%;
+  }
+}
+
