@@ -2,9 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ZapIcon } from '@/components/ui/Icons';
+import { getSupabase } from '@/lib/supabase';
 import FaceVerification, { FaceVerificationResult } from '@/components/ui/FaceVerification';
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ikilkixuvtemkpviwpzr.supabase.co';
 
 const ROLES = [
     { value: 'citizen', label: 'Citizen' },
@@ -85,14 +84,23 @@ export default function RegisterPage() {
         }, 500);
     }, [form.username]);
 
-    // ── Google OAuth — direct redirect to Supabase OAuth endpoint ──
-    const handleGoogleOAuth = () => {
+    // ── Google OAuth — use Supabase client for proper PKCE flow ──
+    const handleGoogleOAuth = async () => {
         setGoogleLoading(true);
         setError('');
         try {
-            const redirectTo = `${window.location.origin}/auth/callback`;
-            const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}&flow_type=implicit`;
-            window.location.href = authUrl;
+            const supabase = getSupabase();
+            const { error: oauthError } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback`,
+                },
+            });
+            if (oauthError) {
+                console.error('Google OAuth error:', oauthError);
+                setError('Failed to start Google sign-up. Please try again.');
+                setGoogleLoading(false);
+            }
         } catch {
             setError('Failed to start Google sign-up. Please try again.');
             setGoogleLoading(false);

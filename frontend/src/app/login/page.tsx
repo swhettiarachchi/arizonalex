@@ -3,9 +3,8 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { getSupabase } from '@/lib/supabase';
 import { ZapIcon, EyeIcon, EyeOffIcon, ShieldIcon, ArrowLeftIcon } from '@/components/ui/Icons';
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ikilkixuvtemkpviwpzr.supabase.co';
 
 function LoginPageInner() {
     const { login } = useAuth();
@@ -46,15 +45,25 @@ function LoginPageInner() {
         }
     }, [searchParams]);
 
-    // ── Google OAuth — direct redirect to Supabase OAuth endpoint ──
-    const handleGoogleOAuth = () => {
+    // ── Google OAuth — use Supabase client for proper PKCE flow ──
+    const handleGoogleOAuth = async () => {
         setGoogleLoading(true);
         setError('');
         setProviderHint(null);
         try {
-            const redirectTo = `${window.location.origin}/auth/callback`;
-            const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}&flow_type=implicit`;
-            window.location.href = authUrl;
+            const supabase = getSupabase();
+            const { error: oauthError } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback`,
+                },
+            });
+            if (oauthError) {
+                console.error('Google OAuth error:', oauthError);
+                setError('Failed to start Google sign-in. Please try again.');
+                setGoogleLoading(false);
+            }
+            // If no error, browser will redirect automatically
         } catch (err) {
             console.error('Google OAuth redirect error:', err);
             setError('Failed to start Google sign-in. Please try again.');
