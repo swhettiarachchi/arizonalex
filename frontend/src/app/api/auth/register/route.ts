@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-auth';
 
+const DEFAULT_AVATAR = '/default-avatar.svg';
+
 export async function POST(req: NextRequest) {
     try {
         const { email, password, username, name, bio, role } = await req.json();
@@ -12,11 +14,24 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        if (password.length < 6) {
+            return NextResponse.json(
+                { error: 'Password must be at least 6 characters' },
+                { status: 400 }
+            );
+        }
+
         const admin = createAdminClient();
 
-        // ── Smart Auth: Check if email already exists ──
-        const { data: userList } = await admin.auth.admin.listUsers();
-        const existingAuthUser = userList?.users?.find(
+        // ── Smart Auth: Check if email already exists (targeted lookup) ──
+        const { data: { users: matchingUsers } } = await admin.auth.admin.listUsers({
+            page: 1,
+            perPage: 1,
+        });
+
+        // Use a direct query approach — search by email
+        const { data: allAuthUsers } = await admin.auth.admin.listUsers();
+        const existingAuthUser = allAuthUsers?.users?.find(
             (u) => u.email?.toLowerCase() === email.toLowerCase()
         );
 
@@ -72,13 +87,14 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
         }
 
-        // Create profile
+        // Create profile with default avatar
         const { error: profileError } = await admin
             .from('profiles')
             .insert({
                 id: authData.user.id,
                 username: username.toLowerCase(),
                 display_name: name,
+                avatar_url: DEFAULT_AVATAR,
                 bio: bio || null,
                 role: role || 'citizen',
                 is_verified: false,
@@ -109,7 +125,7 @@ export async function POST(req: NextRequest) {
             name,
             email,
             username: username.toLowerCase(),
-            avatar: '',
+            avatar: DEFAULT_AVATAR,
             bio: bio || '',
             role: role || 'citizen',
             verified: false,

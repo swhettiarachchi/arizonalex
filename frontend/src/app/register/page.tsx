@@ -1,7 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { ZapIcon } from '@/components/ui/Icons';
 import FaceVerification, { FaceVerificationResult } from '@/components/ui/FaceVerification';
 
@@ -31,19 +30,60 @@ const PARTIES = [
     'Independent', 'Democrat', 'Republican', 'Libertarian', 'Green Party', 'Other', 'None'
 ];
 
+function getPasswordStrength(pw: string): { label: string; color: string; width: string; score: number } {
+    if (!pw) return { label: '', color: 'transparent', width: '0%', score: 0 };
+    let score = 0;
+    if (pw.length >= 6) score++;
+    if (pw.length >= 8) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    if (pw.length >= 12) score++;
+
+    if (score <= 1) return { label: 'Weak', color: '#ef4444', width: '20%', score };
+    if (score <= 2) return { label: 'Fair', color: '#f97316', width: '40%', score };
+    if (score <= 3) return { label: 'Good', color: '#f59e0b', width: '60%', score };
+    if (score <= 4) return { label: 'Strong', color: '#22c55e', width: '80%', score };
+    return { label: 'Very Strong', color: '#10b981', width: '100%', score };
+}
+
 export default function RegisterPage() {
-    const router = useRouter();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [showPass, setShowPass] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [faceData, setFaceData] = useState<FaceVerificationResult | null>(null);
+    const [successMsg, setSuccessMsg] = useState('');
+    const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+    const usernameTimeout = useRef<NodeJS.Timeout | null>(null);
+
     const [form, setForm] = useState({
         name: '', email: '', password: '', confirmPassword: '',
         username: '', bio: '', role: 'citizen', party: ''
     });
     const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+
+    const pwStrength = getPasswordStrength(form.password);
+
+    // ── Username availability check ──
+    useEffect(() => {
+        if (usernameTimeout.current) clearTimeout(usernameTimeout.current);
+        if (!form.username || form.username.length < 3) {
+            setUsernameStatus('idle');
+            return;
+        }
+        setUsernameStatus('checking');
+        usernameTimeout.current = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/auth/check-google?username=${encodeURIComponent(form.username)}`);
+                const data = await res.json();
+                setUsernameStatus(data.usernameTaken ? 'taken' : 'available');
+            } catch {
+                setUsernameStatus('idle');
+            }
+        }, 500);
+    }, [form.username]);
 
     // ── Google OAuth — direct redirect to Supabase OAuth endpoint ──
     const handleGoogleOAuth = () => {
@@ -71,6 +111,7 @@ export default function RegisterPage() {
     const validateStep2 = () => {
         if (!form.username.trim()) return 'Username is required';
         if (form.username.length < 3 || form.username.length > 30) return 'Username must be 3-30 characters';
+        if (usernameStatus === 'taken') return 'This username is already taken';
         return '';
     };
 
@@ -118,7 +159,11 @@ export default function RegisterPage() {
             });
             const data = await res.json();
             if (data.success) {
-                router.push('/');
+                setSuccessMsg('Account created! Redirecting...');
+                // Use window.location.replace for full refresh to pick up cookies
+                setTimeout(() => {
+                    window.location.replace('/');
+                }, 800);
             } else {
                 setError(data.error || 'Registration failed');
             }
@@ -137,6 +182,26 @@ export default function RegisterPage() {
     const handleFaceSkip = () => {
         handleCreate(true);
     };
+
+    // ── Success State ──
+    if (successMsg) {
+        return (
+            <div className="auth-page">
+                <div className="auth-card fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 240, gap: 16, textAlign: 'center' }}>
+                    <div style={{
+                        width: 56, height: 56, borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        animation: 'pulse 1s ease-in-out infinite',
+                    }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    </div>
+                    <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{successMsg}</p>
+                    <span className="auth-spinner" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="auth-page">
@@ -247,6 +312,20 @@ export default function RegisterPage() {
                                     )}
                                 </button>
                             </div>
+                            {/* Password Strength Indicator */}
+                            {form.password && (
+                                <div style={{ marginTop: 8 }}>
+                                    <div style={{ height: 4, borderRadius: 2, background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
+                                        <div style={{ height: '100%', width: pwStrength.width, background: pwStrength.color, borderRadius: 2, transition: 'all 0.3s ease' }} />
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: pwStrength.color }}>{pwStrength.label}</span>
+                                        <span style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>
+                                            {form.password.length < 8 ? 'Use 8+ chars for stronger security' : form.password.length < 12 ? 'Add symbols for best security' : 'Excellent!'}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="form-group">
                             <label className="form-label" htmlFor="reg-confirm">Confirm Password</label>
@@ -254,8 +333,11 @@ export default function RegisterPage() {
                                 <svg className="auth-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                                 <input id="reg-confirm" className="form-input auth-input-with-icon" type={showPass ? 'text' : 'password'} placeholder="Re-enter password" value={form.confirmPassword} onChange={e => update('confirmPassword', e.target.value)} autoComplete="new-password" />
                             </div>
+                            {form.confirmPassword && form.password !== form.confirmPassword && (
+                                <span style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: 4, display: 'block' }}>Passwords do not match</span>
+                            )}
                         </div>
-                        <button className="btn btn-primary btn-lg auth-submit-btn" onClick={nextStep}>
+                        <button className="btn btn-primary btn-lg auth-submit-btn" onClick={nextStep} id="register-continue-btn">
                             Continue
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
                         </button>
@@ -270,7 +352,25 @@ export default function RegisterPage() {
                             <div className="auth-input-wrap">
                                 <span className="auth-input-icon" style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-tertiary)' }}>@</span>
                                 <input id="reg-username" className="form-input auth-input-with-icon" type="text" placeholder="johndoe" value={form.username} onChange={e => update('username', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} maxLength={30} />
+                                {/* Username availability indicator */}
+                                {form.username.length >= 3 && (
+                                    <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }}>
+                                        {usernameStatus === 'checking' && <span className="auth-spinner" style={{ width: 16, height: 16 }} />}
+                                        {usernameStatus === 'available' && (
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                                        )}
+                                        {usernameStatus === 'taken' && (
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                                        )}
+                                    </span>
+                                )}
                             </div>
+                            {usernameStatus === 'taken' && (
+                                <span style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: 4, display: 'block' }}>This username is already taken</span>
+                            )}
+                            {usernameStatus === 'available' && (
+                                <span style={{ fontSize: '0.72rem', color: '#22c55e', marginTop: 4, display: 'block' }}>Username is available</span>
+                            )}
                         </div>
                         <div className="form-group">
                             <label className="form-label" htmlFor="reg-bio">Bio <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>(optional)</span></label>

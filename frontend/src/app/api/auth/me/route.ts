@@ -12,13 +12,15 @@ export async function GET(req: NextRequest) {
         // Fetch full profile
         const profile = await getUserProfile(user.id);
 
+        const authProvider = user.app_metadata?.provider === 'google' ? 'google' : 'email';
+
         return NextResponse.json({
             user: {
                 id: user.id,
                 name: profile?.display_name || user.user_metadata?.display_name || '',
                 email: user.email || '',
                 username: profile?.username || '',
-                avatar: profile?.avatar_url || '',
+                avatar: profile?.avatar_url || '/default-avatar.svg',
                 bio: profile?.bio || '',
                 role: profile?.role || 'citizen',
                 verified: profile?.is_verified || false,
@@ -30,6 +32,7 @@ export async function GET(req: NextRequest) {
                 postsCount: profile?.posts_count || 0,
                 profileViews: profile?.profile_views || 0,
                 twoFactorEnabled: false,
+                authProvider,
             },
         });
     } catch {

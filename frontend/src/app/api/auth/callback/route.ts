@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase-auth';
 
+const DEFAULT_AVATAR = '/default-avatar.svg';
+
 export async function GET(req: NextRequest) {
     try {
         const url = new URL(req.url);
@@ -26,6 +28,26 @@ export async function GET(req: NextRequest) {
         }
 
         const admin = createAdminClient();
+        const userEmail = data.user.email || '';
+
+        // ── Smart Auth: Provider mismatch check ──
+        // Check if this email belongs to a DIFFERENT Supabase user created via email/password
+        if (userEmail) {
+            const { data: allUsers } = await admin.auth.admin.listUsers();
+            const emailUser = allUsers?.users?.find(
+                (u) => u.email?.toLowerCase() === userEmail.toLowerCase() && u.id !== data.user!.id
+            );
+
+            if (emailUser) {
+                const emailProvider = emailUser.app_metadata?.provider;
+                if (emailProvider === 'email') {
+                    // Redirect to login with provider mismatch error
+                    return NextResponse.redirect(
+                        new URL('/login?error=provider_mismatch&provider=email', req.url)
+                    );
+                }
+            }
+        }
 
         // Check if profile exists
         const { data: existingProfile } = await admin
@@ -36,12 +58,12 @@ export async function GET(req: NextRequest) {
 
         // Create profile if first-time OAuth sign-in
         if (!existingProfile) {
-            const email = data.user.email || '';
-            const name = data.user.user_metadata?.full_name || data.user.user_metadata?.name || email.split('@')[0];
-            const avatar = data.user.user_metadata?.avatar_url || data.user.user_metadata?.picture || '';
+            const name = data.user.user_metadata?.full_name || data.user.user_metadata?.name || userEmail.split('@')[0];
+            const googleAvatar = data.user.user_metadata?.avatar_url || data.user.user_metadata?.picture || '';
+            const avatar = googleAvatar || DEFAULT_AVATAR;
 
             // Generate unique username
-            let baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 25);
+            let baseUsername = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 25);
             let username = baseUsername;
             let counter = 1;
             let taken = true;
@@ -87,7 +109,7 @@ export async function GET(req: NextRequest) {
             });
         }
 
-        // Set session cookies and redirect
+        // Set session cookies and redirect to home
         const response = NextResponse.redirect(new URL(next, req.url));
 
         response.cookies.set('sb-access-token', data.session.access_token, {

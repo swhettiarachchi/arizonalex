@@ -1,5 +1,7 @@
 'use client';
 
+const DEFAULT_AVATAR = '/default-avatar.svg';
+
 interface UserAvatarProps {
   name?: string;
   avatar?: string;
@@ -12,6 +14,7 @@ interface UserAvatarProps {
 export function UserAvatar({ name = '?', avatar, size = 'md', hasStory = false, storyViewed = false, style }: UserAvatarProps) {
   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2);
   const isImage = avatar && (avatar.startsWith('/') || avatar.startsWith('http'));
+  const hasValidAvatar = isImage && avatar !== '';
 
   const getFontSize = () => {
     switch (size) {
@@ -23,24 +26,24 @@ export function UserAvatar({ name = '?', avatar, size = 'md', hasStory = false, 
     }
   };
 
-  const avatarContent = isImage ? (
+  // Use default avatar when no image is provided
+  const avatarContent = hasValidAvatar ? (
     <div className={`avatar avatar-${size}`} style={!hasStory ? style : {}}>
       <img
         src={avatar}
         alt={name}
+        onError={(e) => {
+          // Fallback to default avatar on load error
+          (e.target as HTMLImageElement).src = DEFAULT_AVATAR;
+        }}
       />
     </div>
   ) : (
-    <div
-      className={`avatar avatar-${size}`}
-      style={{
-        fontSize: getFontSize(),
-        fontWeight: 800,
-        letterSpacing: size === 'xxl' ? '1px' : '0.5px',
-        ...(!hasStory ? style : {})
-      }}
-    >
-      {avatar && !isImage ? avatar : initials}
+    <div className={`avatar avatar-${size}`} style={!hasStory ? style : {}}>
+      <img
+        src={DEFAULT_AVATAR}
+        alt={name}
+      />
     </div>
   );
 

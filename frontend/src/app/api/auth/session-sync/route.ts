@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createAdminClient } from '@/lib/supabase-auth';
 
+const DEFAULT_AVATAR = '/default-avatar.svg';
+
 export async function POST(req: NextRequest) {
     try {
         const { access_token, refresh_token } = await req.json();
@@ -28,7 +30,6 @@ export async function POST(req: NextRequest) {
         const userEmail = user.email || '';
 
         // ── Smart Auth: Check for provider conflicts ──
-        // Check if this email already has a profile via a DIFFERENT Supabase user (email signup)
         if (userEmail) {
             const { data: allUsers } = await admin.auth.admin.listUsers();
             const emailUser = allUsers?.users?.find(
@@ -71,7 +72,8 @@ export async function POST(req: NextRequest) {
 
         // ── New user — create profile ──
         const name = user.user_metadata?.full_name || user.user_metadata?.name || userEmail.split('@')[0];
-        const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
+        const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture || '';
+        const avatar = googleAvatar || DEFAULT_AVATAR;
 
         // Generate unique username
         let baseUsername = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_').substring(0, 25);

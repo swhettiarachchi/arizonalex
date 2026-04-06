@@ -17,6 +17,7 @@ function LoginPageInner() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
+    const [successMsg, setSuccessMsg] = useState('');
 
     // 2FA state
     const [requires2FA, setRequires2FA] = useState(false);
@@ -49,6 +50,7 @@ function LoginPageInner() {
     const handleGoogleOAuth = () => {
         setGoogleLoading(true);
         setError('');
+        setProviderHint(null);
         try {
             const redirectTo = `${window.location.origin}/auth/callback`;
             const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}&flow_type=implicit`;
@@ -68,7 +70,8 @@ function LoginPageInner() {
         }
         setLoading(true);
         setError('');
-        // Call login API directly to get full error response (including provider_mismatch)
+        setProviderHint(null);
+
         try {
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
@@ -92,8 +95,11 @@ function LoginPageInner() {
             }
 
             if (data.success && data.user) {
-                // Manually sync auth state
-                window.location.href = '/';
+                setSuccessMsg('Login successful! Redirecting...');
+                // Use window.location.replace for full page refresh to pick up cookies
+                setTimeout(() => {
+                    window.location.replace('/');
+                }, 600);
             } else {
                 setError(data.error || 'Login failed. Please try again.');
             }
@@ -115,7 +121,10 @@ function LoginPageInner() {
             });
             const data = await res.json();
             if (data.success) {
-                window.location.href = '/';
+                setSuccessMsg('Verified! Redirecting...');
+                setTimeout(() => {
+                    window.location.replace('/');
+                }, 600);
             } else {
                 setError(data.message || data.error || 'Invalid code');
             }
@@ -124,6 +133,26 @@ function LoginPageInner() {
         }
         setLoading(false);
     };
+
+    // ── Success State ──
+    if (successMsg) {
+        return (
+            <div className="auth-page">
+                <div className="auth-card fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 240, gap: 16, textAlign: 'center' }}>
+                    <div style={{
+                        width: 56, height: 56, borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        animation: 'pulse 1s ease-in-out infinite',
+                    }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    </div>
+                    <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{successMsg}</p>
+                    <span className="auth-spinner" />
+                </div>
+            </div>
+        );
+    }
 
     // ── 2FA Verification Screen ──
     if (requires2FA) {
@@ -192,7 +221,7 @@ function LoginPageInner() {
                 <div className="auth-logo">
                     <div style={{ width: 48, height: 48, background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', color: 'white' }}><ZapIcon size={24} /></div>
                     <h1>Arizonalex</h1>
-                    <p>The Premier Network for Politics, Business & Crypto</p>
+                    <p>The Premier Network for Politics, Business &amp; Crypto</p>
                 </div>
 
                 {/* Google Sign-In via Supabase OAuth */}
@@ -297,6 +326,7 @@ function LoginPageInner() {
                         type="submit"
                         className="btn btn-primary btn-lg auth-submit-btn"
                         disabled={loading}
+                        id="login-submit-btn"
                     >
                         {loading ? (
                             <span className="auth-spinner" />

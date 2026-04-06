@@ -41,6 +41,7 @@ export interface UserProfile {
     identityLevel?: 'normal' | 'verified_citizen' | 'verified_politician' | 'official_government';
     faceioId?: string;
     trustScore?: number;
+    authProvider?: 'google' | 'email';
 }
 
 interface LoginResult {
