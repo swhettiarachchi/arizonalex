@@ -57,10 +57,18 @@ export default function AuthCallbackPage() {
                         return;
                     }
 
-                    setStatus('Success! Redirecting to home...');
-                    setTimeout(() => {
-                        window.location.replace('/');
-                    }, 500);
+                    // Redirect new users to face verification, existing users to home
+                    if (syncData.isNewUser) {
+                        setStatus('Account created! Redirecting to face verification...');
+                        setTimeout(() => {
+                            window.location.replace('/verify-face');
+                        }, 500);
+                    } else {
+                        setStatus('Success! Redirecting to home...');
+                        setTimeout(() => {
+                            window.location.replace('/');
+                        }, 500);
+                    }
                     return;
                 }
 
@@ -111,10 +119,18 @@ export default function AuthCallbackPage() {
                             return;
                         }
 
-                        setStatus('Success! Redirecting to home...');
-                        setTimeout(() => {
-                            window.location.replace('/');
-                        }, 500);
+                        // Redirect new users to face verification, existing users to home
+                        if (syncData.isNewUser) {
+                            setStatus('Account created! Redirecting to face verification...');
+                            setTimeout(() => {
+                                window.location.replace('/verify-face');
+                            }, 500);
+                        } else {
+                            setStatus('Success! Redirecting to home...');
+                            setTimeout(() => {
+                                window.location.replace('/');
+                            }, 500);
+                        }
                         return;
                     } catch (err) {
                         console.error('Code exchange error:', err);

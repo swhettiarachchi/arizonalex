@@ -141,7 +141,7 @@ export default function RegisterPage() {
         setStep(s => s - 1);
     };
 
-    const handleCreate = async (skipFace = false) => {
+    const handleCreate = async (faceResult: FaceVerificationResult) => {
         setLoading(true);
         setError('');
         try {
@@ -154,11 +154,11 @@ export default function RegisterPage() {
                 role: form.role,
                 party: form.party,
             };
-            if (!skipFace && faceData) {
+            if (faceResult) {
                 payload.faceVerified = true;
-                payload.faceioId = faceData.faceioId;
-                payload.verificationScore = faceData.verificationScore;
-                payload.verificationDate = faceData.verifiedAt;
+                payload.faceioId = faceResult.faceioId;
+                payload.verificationScore = faceResult.verificationScore;
+                payload.verificationDate = faceResult.verifiedAt;
             }
             const res = await fetch('/api/auth/register', {
                 method: 'POST',
@@ -184,11 +184,8 @@ export default function RegisterPage() {
 
     const handleFaceSuccess = (result: FaceVerificationResult) => {
         setFaceData(result);
-        setTimeout(() => handleCreate(false), 1500);
-    };
-
-    const handleFaceSkip = () => {
-        handleCreate(true);
+        // Face verified — now create the account with face data
+        setTimeout(() => handleCreate(result), 1500);
     };
 
     // ── Success State ──
@@ -448,8 +445,7 @@ export default function RegisterPage() {
                     <div className="auth-form">
                         <FaceVerification
                             onSuccess={handleFaceSuccess}
-                            onSkip={handleFaceSkip}
-                            showSkip={true}
+                            showSkip={false}
                         />
                         {loading && (
                             <div style={{ textAlign: 'center', padding: '16px 0' }}>

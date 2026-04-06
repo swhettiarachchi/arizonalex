@@ -96,13 +96,14 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        await admin.from('profiles').insert({
+        await (admin.from('profiles') as any).insert({
             id: user.id,
             username,
             display_name: name,
             avatar_url: avatar,
             role: 'citizen',
-            is_verified: true,
+            is_verified: false,
+            face_verified: false,
             trust_score: 0,
             followers_count: 0,
             following_count: 0,

@@ -6,7 +6,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import MobileNav from '@/components/layout/MobileNav';
 import { BellIcon, MailIcon, LandmarkIcon, BookmarkIcon } from '@/components/ui/Icons';
 
-const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/auth/callback'];
+const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/auth/callback', '/verify-face'];
 const PROTECTED_PAGES = ['/notifications', '/messages', '/politics', '/bookmarks'];
 
 const PROTECTED_PAGE_INFO: Record<string, { icon: React.ReactNode; label: string; desc: string }> = {

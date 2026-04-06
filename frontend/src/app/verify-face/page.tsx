@@ -13,12 +13,27 @@ export default function VerifyFacePage() {
     const [verificationData, setVerificationData] = useState<FaceVerificationResult | null>(null);
     const [identityLevel, setIdentityLevel] = useState<IdentityLevel>('normal');
     const [submitting, setSubmitting] = useState(false);
+    const [alreadyVerified, setAlreadyVerified] = useState(false);
 
     useEffect(() => {
         if (!loading && !isLoggedIn) {
             router.push('/login');
         }
     }, [loading, isLoggedIn, router]);
+
+    // Check if user is already face-verified
+    useEffect(() => {
+        if (!loading && isLoggedIn) {
+            fetch('/api/auth/verify-face')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.faceVerified) {
+                        setAlreadyVerified(true);
+                    }
+                })
+                .catch(() => {});
+        }
+    }, [loading, isLoggedIn]);
 
     const handleSuccess = async (result: FaceVerificationResult) => {
         setVerificationData(result);
@@ -29,7 +44,6 @@ export default function VerifyFacePage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    userId: user?.id || 'demo-user',
                     faceioId: result.faceioId,
                     verificationScore: result.verificationScore,
                 }),
@@ -58,6 +72,42 @@ export default function VerifyFacePage() {
         );
     }
 
+    // Already verified — show status and go home
+    if (alreadyVerified) {
+        return (
+            <div className="auth-page">
+                <div className="auth-card fade-in" style={{ maxWidth: 480, textAlign: 'center' }}>
+                    <div style={{
+                        width: 64, height: 64, borderRadius: '50%',
+                        background: 'rgba(0,230,118,0.15)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        margin: '0 auto 20px',
+                    }}>
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00e676" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                    </div>
+                    <h2 style={{ color: '#00e676', marginBottom: 8 }}>Already Verified!</h2>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: '0.9rem' }}>
+                        Your identity has been verified. You have full access to the platform.
+                    </p>
+                    <button
+                        className="btn btn-primary btn-lg"
+                        style={{ width: '100%' }}
+                        onClick={() => window.location.replace('/')}
+                    >
+                        Go to Home
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                            <polyline points="12 5 19 12 12 19" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="auth-page">
             <div className="auth-card fade-in" style={{ maxWidth: 560 }}>
@@ -65,7 +115,10 @@ export default function VerifyFacePage() {
                     <>
                         <div className="auth-logo">
                             <h1>Identity Verification</h1>
-                            <p>Verify your face to unlock your verified badge</p>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                Face verification is <strong style={{ color: '#f59e0b' }}>mandatory</strong> to use Arizonalex.
+                                This keeps our community safe from fake accounts.
+                            </p>
                         </div>
 
                         {/* Current Status */}
@@ -99,7 +152,7 @@ export default function VerifyFacePage() {
                                 <VerifiedBadge level="verified_politician" size={20} />
                                 <div>
                                     <strong>Verified Politician</strong>
-                                    <span>For elected officials & candidates</span>
+                                    <span>For elected officials &amp; candidates</span>
                                 </div>
                             </div>
                             <div className="face-verify__level-item">
@@ -111,6 +164,7 @@ export default function VerifyFacePage() {
                             </div>
                         </div>
 
+                        {/* NO skip — face verification is mandatory */}
                         <FaceVerification
                             onSuccess={handleSuccess}
                             showSkip={false}
@@ -126,13 +180,21 @@ export default function VerifyFacePage() {
                             </div>
                         )}
 
-                        <button
-                            className="face-verify__skip-btn"
-                            onClick={() => router.push('/')}
-                            style={{ marginTop: 12 }}
-                        >
-                            ← Back to Home
-                        </button>
+                        {/* No back/skip button — verification is mandatory */}
+                        <div style={{
+                            marginTop: 16, padding: '12px 16px',
+                            background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
+                            borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10,
+                        }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                <line x1="12" y1="9" x2="12" y2="13" />
+                                <line x1="12" y1="17" x2="12.01" y2="17" />
+                            </svg>
+                            <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                Face verification is required for all accounts. You cannot access the platform without completing this step.
+                            </span>
+                        </div>
                     </>
                 ) : (
                     <div className="face-verify__verified-result fade-in">
@@ -149,7 +211,7 @@ export default function VerifyFacePage() {
                             Verified!
                         </h2>
                         <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: '0 0 24px' }}>
-                            Your identity has been successfully verified
+                            Your identity has been successfully verified. Welcome to Arizonalex!
                         </p>
 
                         <div className="face-verify__status-card">
@@ -178,9 +240,9 @@ export default function VerifyFacePage() {
                         <button
                             className="btn btn-primary btn-lg"
                             style={{ width: '100%', marginTop: 20 }}
-                            onClick={() => router.push('/')}
+                            onClick={() => window.location.replace('/')}
                         >
-                            Go to Home
+                            Enter Arizonalex
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <line x1="5" y1="12" x2="19" y2="12" />
                                 <polyline points="12 5 19 12 12 19" />
