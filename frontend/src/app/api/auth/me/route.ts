@@ -102,49 +102,78 @@ export async function PATCH(req: NextRequest) {
         const user = await getAuthUser(req);
 
         if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            console.error('PATCH /api/auth/me: No authenticated user found');
+            return NextResponse.json({ error: 'Unauthorized — please log in again' }, { status: 401 });
         }
 
-        const updates = await req.json();
+        let updates: Record<string, unknown>;
+        try {
+            updates = await req.json();
+        } catch {
+            return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+        }
+
+        console.log('PATCH /api/auth/me: Updating profile for user', user.id, 'with keys:', Object.keys(updates));
 
         const { createAdminClient } = await import('@/lib/supabase-auth');
         const admin = createAdminClient();
 
         // First, fetch the current profile to get existing metadata
-        const { data: currentProfile } = await admin
+        const { data: currentProfile, error: fetchErr } = await admin
             .from('profiles')
             .select('*')
             .eq('id', user.id)
             .single();
+
+        if (fetchErr) {
+            console.error('PATCH /api/auth/me: Failed to fetch current profile:', fetchErr);
+            return NextResponse.json({ error: 'Failed to load current profile: ' + fetchErr.message }, { status: 500 });
+        }
 
         // Parse existing role metadata
         const existingMeta = parseRoleMetadata(currentProfile?.profession || null);
 
         // Build updated role metadata by merging with existing
         const newMeta: RoleMetadata = { ...existingMeta };
-        if (updates.party !== undefined) newMeta.party = updates.party;
-        if (updates.position !== undefined) newMeta.position = updates.position;
-        if (updates.ideology !== undefined) newMeta.ideology = updates.ideology;
-        if (updates.yearsActive !== undefined) newMeta.yearsActive = updates.yearsActive;
-        if (updates.country !== undefined) newMeta.country = updates.country;
-        if (updates.campaignPromises !== undefined) newMeta.campaignPromises = updates.campaignPromises;
-        if (updates.achievements !== undefined) newMeta.achievements = updates.achievements;
-        if (updates.supportPercentage !== undefined) newMeta.supportPercentage = updates.supportPercentage;
-        if (updates.company !== undefined) newMeta.company = updates.company;
-        if (updates.industry !== undefined) newMeta.industry = updates.industry;
-        if (updates.services !== undefined) newMeta.services = updates.services;
-        if (updates.portfolioUrl !== undefined) newMeta.portfolioUrl = updates.portfolioUrl;
-        if (updates.phone !== undefined) newMeta.phone = updates.phone;
+        if (updates.party !== undefined) newMeta.party = updates.party as string;
+        if (updates.position !== undefined) newMeta.position = updates.position as string;
+        if (updates.ideology !== undefined) newMeta.ideology = updates.ideology as string;
+        if (updates.yearsActive !== undefined) newMeta.yearsActive = updates.yearsActive as string;
+        if (updates.country !== undefined) newMeta.country = updates.country as string;
+        if (updates.campaignPromises !== undefined) newMeta.campaignPromises = updates.campaignPromises as string[];
+        if (updates.achievements !== undefined) newMeta.achievements = updates.achievements as string[];
+        if (updates.supportPercentage !== undefined) newMeta.supportPercentage = updates.supportPercentage as number;
+        if (updates.company !== undefined) newMeta.company = updates.company as string;
+        if (updates.industry !== undefined) newMeta.industry = updates.industry as string;
+        if (updates.services !== undefined) newMeta.services = updates.services as string[];
+        if (updates.portfolioUrl !== undefined) newMeta.portfolioUrl = updates.portfolioUrl as string;
+        if (updates.phone !== undefined) newMeta.phone = updates.phone as string;
 
         // Map frontend field names to database column names
         const dbUpdates: Record<string, unknown> = {};
         if (updates.name !== undefined) dbUpdates.display_name = updates.name;
         if (updates.bio !== undefined) dbUpdates.bio = updates.bio;
-        if (updates.avatar !== undefined) dbUpdates.avatar_url = updates.avatar;
-        if (updates.banner !== undefined) dbUpdates.cover_url = updates.banner;
         if (updates.location !== undefined) dbUpdates.location = updates.location;
         if (updates.website !== undefined) dbUpdates.website = updates.website;
         if (updates.role !== undefined) dbUpdates.role = updates.role;
+
+        // Handle avatar — if it's a data URL, store it directly (or skip if too large)
+        if (updates.avatar !== undefined) {
+            const avatar = updates.avatar as string;
+            if (avatar && avatar.startsWith('data:') && avatar.length > 2_000_000) {
+                console.warn('PATCH /api/auth/me: Avatar too large, skipping');
+            } else {
+                dbUpdates.avatar_url = avatar || null;
+            }
+        }
+        if (updates.banner !== undefined) {
+            const banner = updates.banner as string;
+            if (banner && banner.startsWith('data:') && banner.length > 2_000_000) {
+                console.warn('PATCH /api/auth/me: Banner too large, skipping');
+            } else {
+                dbUpdates.cover_url = banner || null;
+            }
+        }
 
         // Store ALL role-specific data as JSON in the profession column
         dbUpdates.profession = serializeRoleMetadata(newMeta);
@@ -154,6 +183,8 @@ export async function PATCH(req: NextRequest) {
         if (updates.avatar_url !== undefined) dbUpdates.avatar_url = updates.avatar_url;
         if (updates.cover_url !== undefined) dbUpdates.cover_url = updates.cover_url;
 
+        console.log('PATCH /api/auth/me: DB update payload keys:', Object.keys(dbUpdates));
+
         const { data: profile, error } = await admin
             .from('profiles')
             .update(dbUpdates)
@@ -162,9 +193,11 @@ export async function PATCH(req: NextRequest) {
             .single();
 
         if (error) {
-            console.error('Profile update error:', error);
-            return NextResponse.json({ error: error.message }, { status: 400 });
+            console.error('PATCH /api/auth/me: Profile update error:', error);
+            return NextResponse.json({ error: 'Profile update failed: ' + error.message }, { status: 400 });
         }
+
+        console.log('PATCH /api/auth/me: Profile updated successfully for', user.id);
 
         // Parse the saved metadata back for the response
         const savedMeta = parseRoleMetadata(profile.profession);
@@ -205,7 +238,8 @@ export async function PATCH(req: NextRequest) {
             },
         });
     } catch (err) {
-        console.error('Profile update error:', err);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        console.error('PATCH /api/auth/me: Unhandled error:', err);
+        return NextResponse.json({ error: 'Server error — please try again' }, { status: 500 });
     }
 }
+

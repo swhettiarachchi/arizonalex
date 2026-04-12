@@ -201,12 +201,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify(updates),
             });
             const data = await res.json();
-            if (data.user) {
+            if (res.ok && data.user) {
                 setUser(data.user);
+                console.log('Profile updated successfully');
             } else {
+                console.error('Profile update failed:', data.error || res.status);
                 setUser(prev => prev ? { ...prev, ...updates } : prev);
             }
-        } catch {
+        } catch (err) {
+            console.error('Profile update network error:', err);
             setUser(prev => prev ? { ...prev, ...updates } : prev);
         }
     };
