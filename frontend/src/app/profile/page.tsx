@@ -631,9 +631,6 @@ export default function ProfilePage() {
         { id: 'timeline', label: 'Timeline', icon: <ClockIcon size={13} /> },
     ];
 
-    const mutuals = allUsers.filter(u => u.id !== profileUser.id && u.verified).slice(0, 3);
-    const similarUsers = allUsers.filter(u => u.id !== profileUser.id).slice(0, 4);
-
     // Build user object with all display overrides for ProfileComponents
     const profileUser = {
         ...mockUser,
@@ -664,6 +661,9 @@ export default function ProfilePage() {
             portfolioUrl: loggedInUser.portfolioUrl || '',
         } : {}),
     } as any;
+
+    const mutuals = allUsers.filter(u => u.id !== profileUser.id && u.verified).slice(0, 3);
+    const similarUsers = allUsers.filter(u => u.id !== profileUser.id).slice(0, 4);
 
     return (
         <div className="page-container home-3col">
