@@ -40,11 +40,6 @@ export async function POST(req: NextRequest) {
                     .eq('following_id', targetId);
 
                 // Decrement counts
-                await admin.from('profiles')
-                    .update({ following_count: Math.max(0, 0) }) // Will be handled by trigger ideally
-                    .eq('id', user.id);
-
-                // Decrement follower count via raw update
                 const { data: myProfile } = await admin.from('profiles').select('following_count').eq('id', user.id).single();
                 const { data: theirProfile } = await admin.from('profiles').select('followers_count').eq('id', targetId).single();
 

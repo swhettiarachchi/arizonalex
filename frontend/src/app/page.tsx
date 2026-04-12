@@ -537,7 +537,15 @@ function RightPanel({ requireAuth }: { requireAuth: (cb: () => void) => void }) 
               <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>@{user.username}</div>
               <span className={`role-badge role-${user.role}`} style={{ fontSize: '0.6rem', marginTop: 2, display: 'inline-block' }}>{ROLE_LABELS[user.role] ?? user.role}</span>
             </div>
-            <button className="btn btn-outline btn-sm" style={{ fontSize: '0.75rem', padding: '4px 10px', flexShrink: 0 }} onClick={() => requireAuth(() => { })}>Follow</button>
+            <button className="btn btn-outline btn-sm" style={{ fontSize: '0.75rem', padding: '4px 10px', flexShrink: 0 }} onClick={() => requireAuth(async () => {
+              try {
+                await fetch('/api/users/follow', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId: user.id, action: 'follow' }),
+                });
+              } catch { /* silent */ }
+            })}>Follow</button>
           </div>
         ))}
       </div>

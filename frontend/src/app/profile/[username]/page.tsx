@@ -116,21 +116,60 @@ export default function DynamicProfilePage() {
 
     const toggleLike = (id: string) => requireAuth(async () => {
         setFeedPosts(prev => prev.map(p => p.id === id ? { ...p, likes: p.liked ? p.likes - 1 : p.likes + 1, liked: !p.liked } : p));
+        try {
+            const res = await fetch(`/api/posts/${id}/like`, { method: 'POST' });
+            const data = await res.json();
+            if (data.post) setFeedPosts(prev => prev.map(p => p.id === id ? { ...p, likes: data.post.likes, liked: data.post.liked } : p));
+        } catch { /* optimistic stays */ }
     });
     const toggleSave = (id: string) => requireAuth(async () => {
         setFeedPosts(prev => prev.map(p => p.id === id ? { ...p, bookmarked: !p.bookmarked } : p));
+        try {
+            const res = await fetch(`/api/posts/${id}/bookmark`, { method: 'POST' });
+            const data = await res.json();
+            if (data.post) setFeedPosts(prev => prev.map(p => p.id === id ? { ...p, bookmarked: data.post.bookmarked } : p));
+        } catch { /* optimistic stays */ }
     });
-    const handleFollow = () => requireAuth(() => {
-        setIsFollowing(!isFollowing);
+    const handleFollow = () => requireAuth(async () => {
+        const newState = !isFollowing;
+        setIsFollowing(newState);
+        try {
+            const res = await fetch('/api/users/follow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, action: newState ? 'follow' : 'unfollow' }),
+            });
+            const data = await res.json();
+            if (!data.success) setIsFollowing(!newState);
+        } catch {
+            setIsFollowing(!newState);
+        }
     });
 
-    const toggleFollowUser = (userId: string) => requireAuth(() => {
+    const toggleFollowUser = (userId: string) => requireAuth(async () => {
+        const isCurrentlyFollowing = followingIds.has(userId);
         setFollowingIds(prev => {
             const next = new Set(prev);
             if (next.has(userId)) next.delete(userId);
             else next.add(userId);
             return next;
         });
+        try {
+            const res = await fetch('/api/users/follow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, action: isCurrentlyFollowing ? 'unfollow' : 'follow' }),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error();
+        } catch {
+            setFollowingIds(prev => {
+                const next = new Set(prev);
+                if (isCurrentlyFollowing) next.add(userId);
+                else next.delete(userId);
+                return next;
+            });
+        }
     });
 
     const TABS = [

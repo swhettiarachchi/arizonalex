@@ -558,16 +558,19 @@ export default function ProfilePage() {
     const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
     const [activeCommType, setActiveCommType] = useState<null | 'message' | 'call' | 'video'>(null);
 
+    const displayUsername = isLoggedIn && loggedInUser ? loggedInUser.username : '';
+
     useEffect(() => {
+        if (!displayUsername) return;
         fetch(`/api/posts?tab=foryou`)
             .then(r => r.json())
             .then(data => {
                 if (data.posts) {
-                    setFeedPosts(data.posts.filter((p: any) => p.author.username === mockUser.username));
+                    setFeedPosts(data.posts.filter((p: any) => p.author.username === displayUsername));
                 }
             })
             .catch(() => { });
-    }, [mockUser.username]);
+    }, [displayUsername]);
 
     const totalLikes = feedPosts.reduce((a, p) => a + (p.likes || 0), 0);
     const totalReposts = feedPosts.reduce((a, p) => a + (p.reposts || 0), 0);
@@ -587,13 +590,32 @@ export default function ProfilePage() {
         if (data.post) setFeedPosts(prev => prev.map(p => p.id === id ? { ...p, bookmarked: data.post.bookmarked } : p));
     });
 
-    const toggleFollowUser = (userId: string) => requireAuth(() => {
+    const toggleFollowUser = (userId: string) => requireAuth(async () => {
+        const isCurrentlyFollowing = followingIds.has(userId);
+        // Optimistic update
         setFollowingIds(prev => {
             const next = new Set(prev);
             if (next.has(userId)) next.delete(userId);
             else next.add(userId);
             return next;
         });
+        try {
+            const res = await fetch('/api/users/follow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, action: isCurrentlyFollowing ? 'unfollow' : 'follow' }),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error();
+        } catch {
+            // Revert on failure
+            setFollowingIds(prev => {
+                const next = new Set(prev);
+                if (isCurrentlyFollowing) next.add(userId);
+                else next.delete(userId);
+                return next;
+            });
+        }
     });
 
     const openEdit = (step: 'info' | 'role' = 'info') => {
@@ -609,8 +631,8 @@ export default function ProfilePage() {
         { id: 'timeline', label: 'Timeline', icon: <ClockIcon size={13} /> },
     ];
 
-    const mutuals = allUsers.filter(u => u.id !== mockUser.id && u.verified).slice(0, 3);
-    const similarUsers = allUsers.filter(u => u.id !== mockUser.id).slice(0, 4);
+    const mutuals = allUsers.filter(u => u.id !== profileUser.id && u.verified).slice(0, 3);
+    const similarUsers = allUsers.filter(u => u.id !== profileUser.id).slice(0, 4);
 
     // Build user object with all display overrides for ProfileComponents
     const profileUser = {
@@ -661,7 +683,7 @@ export default function ProfilePage() {
                     {/* Avatar overlapping banner */}
                     <div className="prof-hero-avatar-wrap">
                         <div className="prof-hero-avatar-ring">
-                            <UserAvatar name={displayName} avatar={displayAvatar} size="xl" hasStory={checkUserHasStory(mockUser.id)} />
+                            <UserAvatar name={displayName} avatar={displayAvatar} size="xl" hasStory={checkUserHasStory(profileUser.id)} />
                             {isLoggedIn && (
                                 <button className="prof-hero-camera-btn" onClick={() => openEdit('info')}>
                                     <CameraIcon size={12} />
@@ -673,8 +695,8 @@ export default function ProfilePage() {
                     {/* Identity */}
                     <div className="prof-hero-identity">
                         <div className="prof-hero-name">{displayName}</div>
-                        <div className="prof-hero-handle">@{mockUser.username}</div>
-                        {mockUser.verified && (
+                        <div className="prof-hero-handle">@{profileUser.username}</div>
+                        {profileUser.verified && (
                             <div className="prof-hero-verified">
                                 <CheckCircleIcon size={12} /> Verified Account
                             </div>
@@ -688,12 +710,12 @@ export default function ProfilePage() {
                     <div className="prof-hero-stats">
                         <div className="prof-hero-stat prof-hero-stat--followers">
                             <div className="prof-hero-stat-icon"><UsersIcon size={14} /></div>
-                            <div className="prof-hero-stat-val">{formatNumber(mockUser.followers)}</div>
+                            <div className="prof-hero-stat-val">{formatNumber(profileUser.followers)}</div>
                             <div className="prof-hero-stat-label">Followers</div>
                         </div>
                         <div className="prof-hero-stat prof-hero-stat--following">
                             <div className="prof-hero-stat-icon"><UsersIcon size={14} /></div>
-                            <div className="prof-hero-stat-val">{formatNumber(mockUser.following)}</div>
+                            <div className="prof-hero-stat-val">{formatNumber(profileUser.following)}</div>
                             <div className="prof-hero-stat-label">Following</div>
                         </div>
                         <div className="prof-hero-stat prof-hero-stat--posts">
@@ -740,7 +762,7 @@ export default function ProfilePage() {
                     )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--text-secondary)' }}><CalendarIcon size={13} /> Joined {mockUser.joined}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--text-secondary)' }}><CalendarIcon size={13} /> Joined {profileUser.joined}</div>
                         {displayParty && <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--text-secondary)' }}><LandmarkIcon size={13} /> {displayParty}</div>}
                         {displayLocation && <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--text-secondary)' }}><MapPinIcon size={13} /> {displayLocation}</div>}
                         {displayWebsite && <a href={displayWebsite} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--primary)', textDecoration: 'none' }}><GlobeIcon size={13} /> {displayWebsite.replace(/^https?:\/\//, '')}</a>}
@@ -755,7 +777,7 @@ export default function ProfilePage() {
                         { label: 'Total Likes', val: formatNumber(totalLikes), color: '#ef4444' },
                         { label: 'Total Reposts', val: formatNumber(totalReposts), color: '#10b981' },
                         { label: 'Avg Likes/Post', val: formatNumber(Math.round(totalLikes / Math.max(feedPosts.length, 1))), color: 'var(--primary)' },
-                        { label: 'Profile Views', val: formatNumber(mockUser.profileViews ?? 0), color: '#8b5cf6' },
+                        { label: 'Profile Views', val: formatNumber(profileUser.profileViews ?? 0), color: '#8b5cf6' },
                     ].map((s, i) => (
                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--border-light)' }}>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{s.label}</span>
@@ -783,7 +805,7 @@ export default function ProfilePage() {
                     {/* Avatar + actions */}
                     <div className="profile-avatar-section">
                         <div style={{ position: 'relative', display: 'inline-flex' }}>
-                            <UserAvatar name={displayName} avatar={mockUser.avatar} size="xxl" hasStory={checkUserHasStory(mockUser.id)} />
+                            <UserAvatar name={displayName} avatar={profileUser.avatar} size="xxl" hasStory={checkUserHasStory(profileUser.id)} />
                             {isLoggedIn && (
                                 <button onClick={() => openEdit('info')} style={{ position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: '50%', background: 'var(--primary)', color: 'white', border: '2px solid var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                                     <CameraIcon size={13} />
@@ -819,9 +841,9 @@ export default function ProfilePage() {
                     <div className="profile-info">
                         <div className="profile-name">
                             {displayName}
-                            {mockUser.verified && <VerifiedIcon size={16} />}
+                            {profileUser.verified && <VerifiedIcon size={16} />}
                         </div>
-                        <div className="profile-handle">@{mockUser.username}</div>
+                        <div className="profile-handle">@{profileUser.username}</div>
                         <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                             <span className={`role-badge role-${displayRole}`}>{ROLE_LABELS[displayRole] ?? displayRole}</span>
                             {displayParty && <span className="role-badge role-politician">{displayParty}</span>}
@@ -832,18 +854,18 @@ export default function ProfilePage() {
                             )}
                         </div>
                         <div className="profile-meta">
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarIcon size={13} /> Joined {mockUser.joined}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarIcon size={13} /> Joined {profileUser.joined}</span>
                             {displayLocation && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPinIcon size={13} /> {displayLocation}</span>}
                             {displayWebsite && <a href={displayWebsite} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--primary)' }}><GlobeIcon size={13} /> {displayWebsite.replace(/^https?:\/\//, '')}</a>}
-                            {mockUser.profileViews && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><EyeIcon size={13} /> {formatNumber(mockUser.profileViews)} views</span>}
+                            {profileUser.profileViews && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><EyeIcon size={13} /> {formatNumber(profileUser.profileViews)} views</span>}
                         </div>
                     </div>
                     {displayBio && <div className="profile-bio">{displayBio}</div>}
 
                     {/* Stats row */}
                     <div className="profile-stats">
-                        <div className="profile-stat"><div className="profile-stat-value">{formatNumber(mockUser.following)}</div><div className="profile-stat-label">Following</div></div>
-                        <div className="profile-stat"><div className="profile-stat-value">{formatNumber(mockUser.followers)}</div><div className="profile-stat-label">Followers</div></div>
+                        <div className="profile-stat"><div className="profile-stat-value">{formatNumber(profileUser.following)}</div><div className="profile-stat-label">Following</div></div>
+                        <div className="profile-stat"><div className="profile-stat-value">{formatNumber(profileUser.followers)}</div><div className="profile-stat-label">Followers</div></div>
                         <div className="profile-stat"><div className="profile-stat-value">{feedPosts.length}</div><div className="profile-stat-label">Posts</div></div>
                         <div className="profile-stat"><div className="profile-stat-value">{formatNumber(totalLikes)}</div><div className="profile-stat-label">Total Likes</div></div>
                     </div>
@@ -867,12 +889,12 @@ export default function ProfilePage() {
                         <div key={post.id} className="prof-tile" style={{ marginBottom: 16 }}>
                             <article className="post-card fade-in">
                                 <div className="post-header">
-                                    <UserAvatar name={displayName} avatar={mockUser.avatar} hasStory={checkUserHasStory(mockUser.id)} />
+                                    <UserAvatar name={displayName} avatar={profileUser.avatar} hasStory={checkUserHasStory(profileUser.id)} />
                                     <div className="post-meta">
                                         <div className="post-author-row">
                                             <span className="post-author">{displayName}</span>
-                                            {mockUser.verified && <VerifiedIcon size={14} />}
-                                            <span className="post-handle">@{mockUser.username}</span>
+                                            {profileUser.verified && <VerifiedIcon size={14} />}
+                                            <span className="post-handle">@{profileUser.username}</span>
                                             <span className="post-time">{post.timestamp}</span>
                                         </div>
                                         <div style={{ marginTop: 2 }}>

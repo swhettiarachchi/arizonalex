@@ -188,7 +188,11 @@ function ExploreContent() {
         }));
 
         try {
-            await fetch(`/api/users/${targetUser.id}/${endpoint}`, { method: 'PUT' });
+            await fetch('/api/users/follow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: targetUser.id, action: isFollowing ? 'unfollow' : 'follow' }),
+            });
         } catch (error) {
             console.error('Failed to follow/unfollow automatically reverted state');
             // Revert on failure
