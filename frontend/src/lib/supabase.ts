@@ -13,9 +13,13 @@ export function getSupabase(): SupabaseClient<Database> {
         }
         _supabase = createClient<Database>(url, key, {
             auth: {
-                persistSession: true,
-                autoRefreshToken: true,
-                detectSessionInUrl: true,
+                // Disable all client-side session management.
+                // This app uses server-side cookie-based sessions via /api/auth/me.
+                // The Supabase client is only used for OAuth initiation, code exchange,
+                // and Realtime channels — none of which need persisted sessions.
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false,
             },
         })
     }

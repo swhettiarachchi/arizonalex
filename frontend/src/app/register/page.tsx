@@ -1,9 +1,11 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ZapIcon } from '@/components/ui/Icons';
 import { getSupabase } from '@/lib/supabase';
 import FaceVerification, { FaceVerificationResult } from '@/components/ui/FaceVerification';
+import { saveIntendedRoute, popIntendedRoute } from '@/lib/useGuestAnalytics';
 
 const ROLES = [
     { value: 'citizen', label: 'Citizen' },
@@ -46,7 +48,8 @@ function getPasswordStrength(pw: string): { label: string; color: string; width:
     return { label: 'Very Strong', color: '#10b981', width: '100%', score };
 }
 
-export default function RegisterPage() {
+function RegisterPageInner() {
+    const searchParams = useSearchParams();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -88,6 +91,9 @@ export default function RegisterPage() {
     const handleGoogleOAuth = async () => {
         setGoogleLoading(true);
         setError('');
+        // Save intended route before OAuth redirect
+        const returnTo = searchParams.get('returnTo');
+        if (returnTo) saveIntendedRoute(returnTo);
         try {
             const supabase = getSupabase();
             const { error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -168,9 +174,10 @@ export default function RegisterPage() {
             const data = await res.json();
             if (data.success) {
                 setSuccessMsg('Account created! Redirecting...');
+                const destination = searchParams.get('returnTo') || popIntendedRoute() || '/';
                 // Use window.location.replace for full refresh to pick up cookies
                 setTimeout(() => {
-                    window.location.replace('/');
+                    window.location.replace(destination);
                 }, 800);
             } else {
                 setError(data.error || 'Registration failed');
@@ -466,9 +473,23 @@ export default function RegisterPage() {
 
                 <div className="auth-footer">
                     Already have an account?{' '}
-                    <Link href="/login" className="auth-link">Sign In</Link>
+                    <Link href={`/login${searchParams.get('returnTo') ? `?returnTo=${encodeURIComponent(searchParams.get('returnTo')!)}` : ''}`} className="auth-link">Sign In</Link>
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function RegisterPage() {
+    return (
+        <Suspense fallback={
+            <div className="auth-page">
+                <div className="auth-card fade-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
+                    <span className="auth-spinner" />
+                </div>
+            </div>
+        }>
+            <RegisterPageInner />
+        </Suspense>
     );
 }

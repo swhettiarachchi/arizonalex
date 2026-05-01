@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from '../providers/ThemeProvider';
 import { useAuth } from '../providers/AuthProvider';
+import { useAuthGate, isProtectedRoute, getProtectedRouteInfo } from '../providers/AuthGuard';
 import {
     HomeIcon, SearchIcon, PlusIcon, BellIcon, UserIcon,
     MailIcon, LandmarkIcon, BriefcaseIcon,
@@ -93,6 +94,7 @@ export default function MobileNav() {
     const router = useRouter();
     const { theme, toggle } = useTheme();
     const { isLoggedIn, logout, user } = useAuth();
+    const { openAuthModal } = useAuthGate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const drawerRef = useRef<HTMLDivElement>(null);
@@ -185,6 +187,29 @@ export default function MobileNav() {
                                 <div className="mobile-menu-list">
                                     {section.items.map(item => {
                                         const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+                                        const isLocked = !isLoggedIn && isProtectedRoute(item.href);
+                                        const routeInfo = isLocked ? getProtectedRouteInfo(item.href) : null;
+
+                                        if (isLocked) {
+                                            return (
+                                                <button
+                                                    key={item.href}
+                                                    className={`mobile-menu-link ${isActive ? 'active' : ''}`}
+                                                    onClick={() => {
+                                                        setIsMenuOpen(false);
+                                                        openAuthModal(
+                                                            routeInfo?.desc || 'Sign in to access this feature.',
+                                                            item.href
+                                                        );
+                                                    }}
+                                                >
+                                                    <span className="mobile-menu-icon">{item.icon}</span>
+                                                    <span className="mobile-menu-label">{item.label}</span>
+                                                    <span className="nav-lock-icon"><LockIcon size={12} /></span>
+                                                </button>
+                                            );
+                                        }
+
                                         return (
                                             <Link
                                                 key={item.href}
@@ -237,6 +262,25 @@ export default function MobileNav() {
             <nav className="mobile-nav">
                 {bottomTabs.map(item => {
                     const isActive = pathname === item.href;
+                    const isLocked = !isLoggedIn && isProtectedRoute(item.href);
+                    const routeInfo = isLocked ? getProtectedRouteInfo(item.href) : null;
+
+                    if (isLocked) {
+                        return (
+                            <button
+                                key={item.href}
+                                className={`mobile-nav-item ${item.isAction ? 'action' : ''}`}
+                                onClick={() => openAuthModal(
+                                    routeInfo?.desc || 'Sign in to access this feature.',
+                                    item.href
+                                )}
+                            >
+                                <span className="mobile-nav-icon">{item.icon}</span>
+                                <span className="mobile-nav-label">{item.label}</span>
+                            </button>
+                        );
+                    }
+
                     return (
                         <Link
                             key={item.href}

@@ -2,24 +2,20 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { useAuthGate, isProtectedRoute, getProtectedRouteInfo } from '@/components/providers/AuthGuard';
 import Sidebar from '@/components/layout/Sidebar';
 import MobileNav from '@/components/layout/MobileNav';
-import { BellIcon, MailIcon, LandmarkIcon, BookmarkIcon } from '@/components/ui/Icons';
+import Link from 'next/link';
+import { ZapIcon } from '@/components/ui/Icons';
+import { saveIntendedRoute, trackProtectedPageAttempt } from '@/lib/useGuestAnalytics';
 
 const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/auth/callback', '/verify-face'];
-const PROTECTED_PAGES = ['/notifications', '/messages', '/politics', '/bookmarks'];
-
-const PROTECTED_PAGE_INFO: Record<string, { icon: React.ReactNode; label: string; desc: string }> = {
-    '/notifications': { icon: <BellIcon size={28} />, label: 'Notifications', desc: 'Sign in to see your notifications, mentions, and activity.' },
-    '/messages': { icon: <MailIcon size={28} />, label: 'Messages', desc: 'Sign in to send and receive direct messages.' },
-    '/politics': { icon: <LandmarkIcon size={28} />, label: 'Politics Hub', desc: 'Sign in to access polls, promise trackers, events, and political analytics.' },
-    '/bookmarks': { icon: <BookmarkIcon size={28} />, label: 'Bookmarks', desc: 'Sign in to view your saved posts and bookmarks.' },
-};
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
-    const { isLoggedIn } = useAuth();
+    const { isLoggedIn, loading } = useAuth();
+    const { openAuthModal } = useAuthGate();
     const isAuthPage = AUTH_PAGES.includes(pathname);
     const [intercepting, setIntercepting] = useState(false);
 
@@ -76,12 +72,99 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         return <main className="main-content">{children}</main>;
     }
 
+    // ── Protected Route Guard ──
+    // If user is NOT logged in and tries to access a protected route,
+    // show a premium "sign in required" placeholder instead of the page content.
+    const isProtected = isProtectedRoute(pathname);
+    const showProtectedPlaceholder = isProtected && !isLoggedIn && !loading;
+
+    // Track the attempt for analytics
+    if (showProtectedPlaceholder) {
+        trackProtectedPageAttempt(pathname);
+    }
+
+    const routeInfo = showProtectedPlaceholder ? getProtectedRouteInfo(pathname) : null;
+
     // All other pages show sidebar + mobile nav (even for guests)
     return (
         <div className="app-layout">
             <Sidebar />
-            <main className="main-content">{children}</main>
+            <main className="main-content">
+                {showProtectedPlaceholder ? (
+                    <ProtectedPagePlaceholder
+                        routeInfo={routeInfo}
+                        pathname={pathname}
+                        onSignIn={() => {
+                            saveIntendedRoute(pathname);
+                            openAuthModal(routeInfo?.desc || 'Sign in to access this page.', pathname);
+                        }}
+                    />
+                ) : (
+                    children
+                )}
+            </main>
             <MobileNav />
+        </div>
+    );
+}
+
+/* ── Protected Page Placeholder Component ── */
+function ProtectedPagePlaceholder({
+    routeInfo,
+    pathname,
+    onSignIn,
+}: {
+    routeInfo: { icon: string; label: string; desc: string } | null;
+    pathname: string;
+    onSignIn: () => void;
+}) {
+    return (
+        <div className="protected-placeholder">
+            {/* Decorative background */}
+            <div className="protected-placeholder-bg" />
+
+            <div className="protected-placeholder-card fade-in">
+                {/* Icon */}
+                <div className="protected-placeholder-icon-wrap">
+                    <span className="protected-placeholder-emoji">
+                        {routeInfo?.icon || '🔒'}
+                    </span>
+                </div>
+
+                {/* Title */}
+                <h1 className="protected-placeholder-title">
+                    {routeInfo?.label || 'Protected Page'}
+                </h1>
+
+                {/* Description */}
+                <p className="protected-placeholder-desc">
+                    {routeInfo?.desc || 'You need to sign in to access this page.'}
+                </p>
+
+                {/* CTA Buttons */}
+                <div className="protected-placeholder-actions">
+                    <button
+                        className="btn btn-primary btn-lg protected-placeholder-btn"
+                        onClick={onSignIn}
+                        id="protected-sign-in"
+                    >
+                        <ZapIcon size={18} />
+                        Sign In
+                    </button>
+                    <Link
+                        href={`/register?returnTo=${encodeURIComponent(pathname)}`}
+                        className="btn btn-outline btn-lg protected-placeholder-btn"
+                        id="protected-register"
+                    >
+                        Create Account
+                    </Link>
+                </div>
+
+                {/* Browse as guest hint */}
+                <p className="protected-placeholder-hint">
+                    You can still browse public content like profiles, debates, and news without signing in.
+                </p>
+            </div>
         </div>
     );
 }

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { popIntendedRoute } from '@/lib/useGuestAnalytics';
 
 export default function AuthCallbackPage() {
     const router = useRouter();
@@ -57,16 +58,17 @@ export default function AuthCallbackPage() {
                         return;
                     }
 
-                    // Redirect new users to face verification, existing users to home
+                    // Redirect new users to face verification, existing users to intended route
                     if (syncData.isNewUser) {
                         setStatus('Account created! Redirecting to face verification...');
                         setTimeout(() => {
                             window.location.replace('/verify-face');
                         }, 500);
                     } else {
-                        setStatus('Success! Redirecting to home...');
+                        const returnTo = popIntendedRoute() || '/';
+                        setStatus('Success! Redirecting...');
                         setTimeout(() => {
-                            window.location.replace('/');
+                            window.location.replace(returnTo);
                         }, 500);
                     }
                     return;
@@ -119,16 +121,17 @@ export default function AuthCallbackPage() {
                             return;
                         }
 
-                        // Redirect new users to face verification, existing users to home
+                        // Redirect new users to face verification, existing users to intended route
                         if (syncData.isNewUser) {
                             setStatus('Account created! Redirecting to face verification...');
                             setTimeout(() => {
                                 window.location.replace('/verify-face');
                             }, 500);
                         } else {
-                            setStatus('Success! Redirecting to home...');
+                            const returnTo = popIntendedRoute() || '/';
+                            setStatus('Success! Redirecting...');
                             setTimeout(() => {
-                                window.location.replace('/');
+                                window.location.replace(returnTo);
                             }, 500);
                         }
                         return;

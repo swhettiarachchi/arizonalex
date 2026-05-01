@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from '../providers/ThemeProvider';
 import { useAuth } from '../providers/AuthProvider';
+import { useAuthGate, isProtectedRoute, getProtectedRouteInfo } from '../providers/AuthGuard';
 import {
     HomeIcon, SearchIcon, BellIcon, MailIcon, LandmarkIcon, BotIcon,
     BookmarkIcon, UserIcon, SettingsIcon, SunIcon, MoonIcon,
@@ -90,6 +91,7 @@ export default function Sidebar() {
     const router = useRouter();
     const { theme, toggle } = useTheme();
     const { isLoggedIn, logout, user } = useAuth();
+    const { openAuthModal } = useAuthGate();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -177,6 +179,26 @@ export default function Sidebar() {
                         )}
                         {section.items.map(item => {
                             const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+                            const isLocked = !isLoggedIn && isProtectedRoute(item.href);
+                            const routeInfo = isLocked ? getProtectedRouteInfo(item.href) : null;
+
+                            if (isLocked) {
+                                return (
+                                    <button
+                                        key={item.href}
+                                        className={`nav-item ${isActive ? 'active' : ''}`}
+                                        onClick={() => openAuthModal(
+                                            routeInfo?.desc || 'Sign in to access this feature.',
+                                            item.href
+                                        )}
+                                    >
+                                        <span className="nav-icon">{item.icon}</span>
+                                        <span className="nav-label">{item.label}</span>
+                                        <span className="nav-lock-icon"><LockIcon size={12} /></span>
+                                    </button>
+                                );
+                            }
+
                             return (
                                 <Link key={item.href} href={item.href} className={`nav-item ${isActive ? 'active' : ''}`}>
                                     <span className="nav-icon">{item.icon}</span>

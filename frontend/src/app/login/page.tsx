@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { getSupabase } from '@/lib/supabase';
 import { ZapIcon, EyeIcon, EyeOffIcon, ShieldIcon, ArrowLeftIcon } from '@/components/ui/Icons';
+import { popIntendedRoute, saveIntendedRoute } from '@/lib/useGuestAnalytics';
 
 function LoginPageInner() {
     const { login } = useAuth();
@@ -45,11 +46,23 @@ function LoginPageInner() {
         }
     }, [searchParams]);
 
+    // ── Determine redirect destination ──
+    const getRedirectTo = (): string => {
+        const paramReturn = searchParams.get('returnTo');
+        if (paramReturn) return paramReturn;
+        const stored = popIntendedRoute();
+        if (stored) return stored;
+        return '/';
+    };
+
     // ── Google OAuth — use Supabase client for proper PKCE flow ──
     const handleGoogleOAuth = async () => {
         setGoogleLoading(true);
         setError('');
         setProviderHint(null);
+        // Save intended route before OAuth redirect
+        const returnTo = getRedirectTo();
+        if (returnTo && returnTo !== '/') saveIntendedRoute(returnTo);
         try {
             const supabase = getSupabase();
             const { error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -105,9 +118,10 @@ function LoginPageInner() {
 
             if (data.success && data.user) {
                 setSuccessMsg('Login successful! Redirecting...');
+                const destination = getRedirectTo();
                 // Use window.location.replace for full page refresh to pick up cookies
                 setTimeout(() => {
-                    window.location.replace('/');
+                    window.location.replace(destination);
                 }, 600);
             } else {
                 setError(data.error || 'Login failed. Please try again.');
@@ -131,8 +145,9 @@ function LoginPageInner() {
             const data = await res.json();
             if (data.success) {
                 setSuccessMsg('Verified! Redirecting...');
+                const destination = getRedirectTo();
                 setTimeout(() => {
-                    window.location.replace('/');
+                    window.location.replace(destination);
                 }, 600);
             } else {
                 setError(data.message || data.error || 'Invalid code');
@@ -347,7 +362,7 @@ function LoginPageInner() {
 
                 <div className="auth-footer">
                     Don&apos;t have an account?{' '}
-                    <Link href="/register" className="auth-link">Create Account</Link>
+                    <Link href={`/register${searchParams.get('returnTo') ? `?returnTo=${encodeURIComponent(searchParams.get('returnTo')!)}` : ''}`} className="auth-link">Create Account</Link>
                 </div>
             </div>
         </div>
