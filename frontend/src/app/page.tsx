@@ -791,22 +791,7 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* Story Bar */}
-          <div className="story-bar" style={{ borderBottom: 'none' }}>
-            <div className="story-item" onClick={() => requireAuth(() => setShowStoryModal(true))} style={{ cursor: 'pointer' }}>
-              <div style={{ position: 'relative' }}>
-                <UserAvatar name="Alex Jordan" avatar="/avatars/alex-jordan.png" size="lg" hasStory storyViewed />
-                <div className="story-plus-overlay"><PlusIcon size={12} /></div>
-              </div>
-              <span className="story-name">Your Story</span>
-            </div>
-            {storyList.map(story => (
-              <div key={story.id} className="story-item" style={{ cursor: 'pointer' }}>
-                <UserAvatar name={story.author.name} avatar={story.author.avatar} size="lg" hasStory storyViewed={story.viewed} />
-                <span className="story-name">{story.author.name.split(' ')[0]}</span>
-              </div>
-            ))}
-          </div>
+
         </div>
 
         {/* Compose / Guest CTA */}
