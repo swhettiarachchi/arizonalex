@@ -96,7 +96,7 @@ export async function GET() {
     // ─── 0. FETCH BASELINE METADATA FOR ALL TOP 100 COINS ONCE EVERY 5 MINUTES ───
     if (now - cgCoinsLastFetch > CG_COINS_CACHE_MS || cgCoinsCache.length === 0) {
         try {
-            const cgRes = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false', { cache: 'no-store' });
+            const cgRes = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false', { next: { revalidate: 60 } });
             if (cgRes.ok) {
                 const cgData = await cgRes.json();
                 if (Array.isArray(cgData) && cgData.length > 0) {
@@ -112,10 +112,16 @@ export async function GET() {
         }
     }
 
+    // Baseline fallback: always ensure priceCache has at least CoinGecko data
+    if (priceCache.length === 0 && cgCoinsCache.length > 0) {
+        priceCache = [...cgCoinsCache];
+    }
+
     // ─── 1. FETCH LIVE PRICES FROM BINANCE VERY RAPIDLY (1S INTERVAL) ───
-    if (now - priceLastFetch > PRICE_CACHE_MS || priceCache.length === 0) {
+    if (now - priceLastFetch > PRICE_CACHE_MS || priceCache.length === 0 || priceCache === cgCoinsCache) {
         try {
-            const bRes = await fetch('https://api.binance.com/api/v3/ticker/24hr', { cache: 'no-store' });
+            // Use revalidate instead of no-store to be safer on Edge, though we want rapid updates
+            const bRes = await fetch('https://api.binance.com/api/v3/ticker/24hr', { next: { revalidate: 10 } });
             if (bRes.ok) {
                 const bData = await bRes.json();
                 const bMap = new Map();
@@ -148,14 +154,20 @@ export async function GET() {
                 // Always sort by the true dynamic market cap descending so top coins surface properly when prices bounce
                 priceCache = updatedCoins.sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0));
                 priceLastFetch = now;
+            } else {
+                // Binance blocked (e.g., 403 on Vercel US servers)
+                priceCache = cgCoinsCache;
             }
-        } catch { /* proceed with cache */ }
+        } catch { 
+            // Network error
+            priceCache = cgCoinsCache; 
+        }
     }
 
     // ─── 2. FETCH FEAR & GREED ───
     if (now - fgLastFetch > FG_CACHE_MS) {
         try {
-            const fgRes = await fetch('https://api.alternative.me/fng/?limit=1', { cache: 'no-store' });
+            const fgRes = await fetch('https://api.alternative.me/fng/?limit=1', { next: { revalidate: 3600 } });
             if (fgRes.ok) {
                 const fgData = await fgRes.json();
                 if (fgData?.data?.[0]) {
@@ -169,7 +181,7 @@ export async function GET() {
     // ─── 3. FETCH TRENDING COINS ───
     if (now - trendingLastFetch > TRENDING_CACHE_MS) {
         try {
-            const tRes = await fetch('https://api.coingecko.com/api/v3/search/trending', { cache: 'no-store' });
+            const tRes = await fetch('https://api.coingecko.com/api/v3/search/trending', { next: { revalidate: 300 } });
             if (tRes.ok) {
                 const tData = await tRes.json();
                 if (tData?.coins) {
@@ -205,7 +217,7 @@ export async function GET() {
     // ─── 5. FETCH TRUE GLOBAL STATS DIRECTLY (CoinGecko Global ─ authoritative, matches TradingView) ───
     if (now - globalLastFetch > GLOBAL_CACHE_MS) {
         try {
-            const gRes = await fetch('https://api.coingecko.com/api/v3/global', { cache: 'no-store' });
+            const gRes = await fetch('https://api.coingecko.com/api/v3/global', { next: { revalidate: 300 } });
             if (gRes.ok) {
                 const gData = await gRes.json();
                 if (gData?.data?.total_market_cap?.usd) {

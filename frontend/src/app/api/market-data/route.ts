@@ -23,8 +23,8 @@ async function fetchQuote(ticker: { symbol: string; label: string; url: string }
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'application/json',
             },
-            // No Next.js cache, always fresh
-            cache: 'no-store',
+            // Cache for 60 seconds at Edge to prevent Yahoo Finance blocking Vercel IP
+            next: { revalidate: 60 },
         });
 
         if (!res.ok) return null;
